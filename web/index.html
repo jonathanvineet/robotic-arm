@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RoboArm Studio</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23f28c28'/><path d='M8 25h10M11 25l3-9 7-5 3 3' stroke='%2314161b' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/controls/OrbitControls.js": "./vendor/OrbitControls.js" } }
+</script>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo"></span><b>RoboArm</b><span class="muted">Studio</span></div>
+
+  <div class="conn">
+    <select id="mode" title="Connection">
+      <option value="sim">Simulator</option>
+      <option value="ws">Wi-Fi</option>
+      <option value="serial">USB serial</option>
+    </select>
+    <input id="host" placeholder="192.168.4.1" spellcheck="false" autocomplete="off">
+    <button id="connectBtn" class="btn primary">Connect</button>
+    <span id="status" class="pill off">offline</span>
+    <span id="rtt" class="muted mono"></span>
+  </div>
+
+  <div class="flags">
+    <span id="flagMove" class="flag">IDLE</span>
+    <span id="flagRelax" class="flag">TORQUE</span>
+    <span id="flagPca" class="flag">PCA9685</span>
+  </div>
+
+  <button id="estopBtn" class="estop" title="Emergency stop (Space)">E-STOP</button>
+</header>
+
+<main class="grid">
+  <!-- ================================================= joints -->
+  <aside class="col left">
+    <section class="card">
+      <div class="card-h">
+        <h2>Joints</h2>
+        <div class="seg" id="stepSeg" title="Jog step (°)"></div>
+      </div>
+      <div id="joints"></div>
+      <div class="row gap wrap">
+        <button id="homeBtn" class="btn">⌂ Home</button>
+        <button id="stopBtn" class="btn">■ Stop</button>
+        <button id="relaxBtn" class="btn">Relax</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-h"><h2>Motion</h2></div>
+      <label class="field">
+        <span>Speed <b class="mono" id="speedVal"></b> °/s</span>
+        <input type="range" id="speed" min="5" max="360" step="5">
+      </label>
+      <label class="field">
+        <span>Acceleration <b class="mono" id="accelVal"></b> °/s²</span>
+        <input type="range" id="accel" min="20" max="2000" step="10">
+      </label>
+      <label class="check"><input type="checkbox" id="sync"> Synchronised moves (all joints arrive together)</label>
+      <div class="presets row gap wrap">
+        <button class="btn sm" data-speed="20,80">Gentle</button>
+        <button class="btn sm" data-speed="90,240">Normal</button>
+        <button class="btn sm" data-speed="200,800">Fast</button>
+      </div>
+    </section>
+  </aside>
+
+  <!-- ================================================= twin -->
+  <section class="col center">
+    <div id="twin" class="twin">
+      <div class="hud tl mono" id="tcp"></div>
+      <div class="hud tr">
+        <div class="seg" id="viewSeg">
+          <button data-view="iso">3D</button><button data-view="front">Front</button><button data-view="side">Side</button><button data-view="top">Top</button>
+        </div>
+      </div>
+      <div class="hud bl row gap wrap">
+        <label class="check sm"><input type="checkbox" id="optGhost" checked> Target ghost</label>
+        <label class="check sm"><input type="checkbox" id="optTrail" checked> Trail</label>
+        <label class="check sm"><input type="checkbox" id="optEnv" checked> Reach</label>
+        <button class="btn sm ghost" id="clearTrail">Clear trail</button>
+      </div>
+      <div class="hud br mono muted" id="hudMode"></div>
+      <div id="estopBanner" class="banner hidden">
+        <b>EMERGENCY STOP</b><span>All motion frozen. Check the arm, then</span>
+        <button id="estopReset" class="btn primary">Reset E-stop</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================= tools -->
+  <aside class="col right">
+    <section class="card tabs-card">
+      <nav class="tabs" id="tabs">
+        <button data-tab="xyz" class="on">XYZ</button>
+        <button data-tab="poses">Poses</button>
+        <button data-tab="seq">Sequence</button>
+        <button data-tab="cal">Calibrate</button>
+        <button data-tab="test">Test</button>
+        <button data-tab="dev">Device</button>
+      </nav>
+
+      <!-- XYZ / IK -->
+      <div class="tab on" data-tab="xyz">
+        <p class="hint">Move the fingertip in millimetres. The arm works out the joint angles (inverse kinematics).</p>
+        <div class="xyz">
+          <label>X <input type="number" id="ikX" step="5"></label>
+          <label>Y <input type="number" id="ikY" step="5"></label>
+          <label>Z <input type="number" id="ikZ" step="5"></label>
+          <label>Pitch° <input type="number" id="ikP" step="5" title="90 = horizontal, 180 = pointing down"></label>
+        </div>
+        <div class="row gap">
+          <button class="btn primary" id="ikGo">Go to XYZ</button>
+          <button class="btn" id="ikUse">Use current</button>
+        </div>
+        <div class="ikmsg" id="ikMsg"></div>
+        <h3>Cartesian jog</h3>
+        <div class="row gap"><span class="muted">Step</span>
+          <div class="seg" id="mmSeg"></div>
+        </div>
+        <div class="jogpad">
+          <button data-cj="z,1">Z+</button><button data-cj="x,1">X+</button><button data-cj="p,1">Tilt ↓</button>
+          <button data-cj="y,1">Y+ ←</button><span></span><button data-cj="y,-1">→ Y−</button>
+          <button data-cj="z,-1">Z−</button><button data-cj="x,-1">X−</button><button data-cj="p,-1">Tilt ↑</button>
+        </div>
+      </div>
+
+      <!-- Poses -->
+      <div class="tab" data-tab="poses">
+        <div class="row gap">
+          <input id="poseName" placeholder="Pose name" class="grow">
+          <button class="btn primary" id="poseSave">Save current</button>
+        </div>
+        <ul class="list" id="poseList"></ul>
+      </div>
+
+      <!-- Sequence -->
+      <div class="tab" data-tab="seq">
+        <div class="row gap wrap">
+          <button class="btn" id="seqAdd">+ Add current pose</button>
+          <label class="inline">Pause <input type="number" id="seqDwell" value="300" min="0" step="100"> ms</label>
+        </div>
+        <div class="row gap wrap">
+          <button class="btn primary" id="seqPlay">▶ Play</button>
+          <button class="btn" id="seqStop">■ Stop</button>
+          <label class="check"><input type="checkbox" id="seqLoop"> Loop</label>
+          <span class="muted" id="seqStatus"></span>
+        </div>
+        <ol class="list steps" id="seqList"></ol>
+        <div class="row gap wrap">
+          <button class="btn sm" id="seqExport">Export</button>
+          <button class="btn sm" id="seqImport">Import</button>
+          <button class="btn sm danger" id="seqClear">Clear</button>
+          <input type="file" id="seqFile" accept=".json,application/json" hidden>
+        </div>
+      </div>
+
+      <!-- Calibrate -->
+      <div class="tab" data-tab="cal">
+        <p class="hint">Angles are servo degrees (0–180). <b>Zero</b> is the servo angle where that joint points straight up in the twin. Click <b>Apply</b> to send to the arm, then <b>Save</b> to keep it after reboot.</p>
+        <div class="tablewrap">
+          <table class="cal" id="calTable"></table>
+        </div>
+        <div class="row gap wrap">
+          <button class="btn primary" id="calApply">Apply</button>
+          <button class="btn" id="calSave">Save to flash</button>
+          <button class="btn" id="calRevert">Reload</button>
+          <button class="btn danger" id="calFactory">Factory reset</button>
+        </div>
+        <div class="row gap wrap">
+          <label class="inline">PCA9685 osc <input type="number" id="calOsc" step="100000" class="w9"> Hz</label>
+          <label class="check"><input type="checkbox" id="calBootRelax"> Start limp on power-up</label>
+        </div>
+        <h3>Twin geometry (mm)</h3>
+        <div class="xyz five" id="links"></div>
+        <p class="hint">Measure axis-to-axis on your arm. These are only used by the twin and IK, and are stored in this browser.</p>
+      </div>
+
+      <!-- Test -->
+      <div class="tab" data-tab="test">
+        <div class="row gap wrap">
+          <button class="btn primary" id="testSweep">Self-test sweep</button>
+          <button class="btn" id="testRandom">10 random poses</button>
+          <button class="btn" id="testLimits">Limits check</button>
+          <button class="btn danger" id="testAbort">Abort</button>
+        </div>
+        <div class="progress"><div id="testBar"></div></div>
+        <div class="muted" id="testStatus">Runs on the simulator or the real arm.</div>
+
+        <h3>Simulator</h3>
+        <div class="row gap wrap">
+          <label class="inline">Latency <input type="number" id="simLat" value="0" min="0" step="10"> ms</label>
+          <label class="inline">Jitter <input type="number" id="simJit" value="0" min="0" step="10"> ms</label>
+        </div>
+        <p class="hint">Applies on the next simulator connect. Try 80 ms + 40 ms jitter to feel bad Wi-Fi.</p>
+
+        <h3>Pulse monitor</h3>
+        <div id="pulses" class="pulses mono"></div>
+
+        <h3>Controls</h3>
+        <div class="keys">
+          <span><kbd>Space</kbd> E-stop</span><span><kbd>Esc</kbd> Stop</span><span><kbd>H</kbd> Home</span>
+          <span><kbd>1</kbd>–<kbd>6</kbd> select joint</span><span><kbd>←</kbd><kbd>→</kbd> jog (<kbd>Shift</kbd> ×5)</span>
+          <span><kbd>W</kbd><kbd>S</kbd><kbd>A</kbd><kbd>D</kbd><kbd>R</kbd><kbd>F</kbd> XYZ jog</span>
+        </div>
+        <div class="muted" id="padStatus">Gamepad: plug in and press any button.</div>
+      </div>
+
+      <!-- Device -->
+      <div class="tab" data-tab="dev">
+        <dl class="info" id="devInfo"></dl>
+        <div class="row gap wrap">
+          <button class="btn" id="devGet">Refresh</button>
+          <button class="btn" id="devScan">I2C scan</button>
+          <button class="btn" id="devHold">Hold torque</button>
+          <button class="btn danger" id="devReboot">Reboot</button>
+        </div>
+        <h3>Wi-Fi network</h3>
+        <p class="hint">The arm joins this network on boot. If it can't, it falls back to its own hotspot <b>RoboArm</b> (password <b>roboarm123</b>, address 192.168.4.1).</p>
+        <div class="row gap wrap">
+          <input id="wifiSsid" placeholder="SSID" class="grow" autocomplete="off">
+          <input id="wifiPass" placeholder="Password" type="password" class="grow" autocomplete="new-password">
+          <button class="btn primary" id="wifiSave">Save &amp; reboot</button>
+        </div>
+        <h3>Raw command</h3>
+        <div class="row gap">
+          <input id="rawCmd" class="grow mono" placeholder='{"c":"jog","i":0,"d":10}' spellcheck="false">
+          <button class="btn" id="rawSend">Send</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card log-card">
+      <div class="card-h"><h2>Log</h2><button class="btn sm ghost" id="logClear">Clear</button></div>
+      <div id="log" class="log mono"></div>
+    </section>
+  </aside>
+</main>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
