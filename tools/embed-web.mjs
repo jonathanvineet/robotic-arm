@@ -15,7 +15,7 @@ const files = [];
   for (const n of readdirSync(dir)) {
     const p = join(dir, n);
     if (statSync(p).isDirectory()) {
-      if (n !== 'tests') walk(p);
+      if (n !== 'tests' && n !== 'ort') walk(p); // in-browser YOLO engine is too big for the ESP
     } else if (MIME[extname(n)]) files.push(p);
   }
 })(web);

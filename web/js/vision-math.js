@@ -301,6 +301,7 @@ export const PICK_DEFAULTS = {
   alignRoll: false, // turn the wrist to grip across long objects (only for arms whose roll comes AFTER pitch)
   heightFix: true, // angled-camera correction (see correctHeight)
   hfov: 70, // camera horizontal field of view guess (deg), used when looking straight down
+  conf: 0.5, // YOLO confidence threshold (in-browser detector)
   pitches: Array.from({ length: 25 }, (_, i) => 180 - i * 5), // 180 (straight down) .. 60
 };
 

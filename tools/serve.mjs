@@ -7,7 +7,10 @@ import { fileURLToPath } from 'node:url';
 
 const web = join(dirname(fileURLToPath(import.meta.url)), '..', 'web');
 const port = +process.env.PORT || 8080;
-const MIME = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml' };
+const MIME = {
+  '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript',
+  '.json': 'application/json', '.svg': 'image/svg+xml', '.wasm': 'application/wasm', '.onnx': 'application/octet-stream',
+};
 
 createServer(async (req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
@@ -16,9 +19,16 @@ createServer(async (req, res) => {
   if (!file.startsWith(web)) return res.writeHead(403).end();
   try {
     const body = await readFile(file);
-    res.writeHead(200, { 'Content-Type': MIME[extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
+    res.writeHead(200, {
+      'Content-Type': MIME[extname(file)] || 'application/octet-stream',
+      'Cache-Control': 'no-store',
+      // cross-origin isolation -> the in-browser YOLO can use several CPU threads
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    });
     res.end(body);
   } catch {
     res.writeHead(404).end('not found');
   }
 }).listen(port, () => console.log(`RoboArm Studio -> http://localhost:${port}`));
+export { port };

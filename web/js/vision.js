@@ -3,6 +3,8 @@
 // (Plastic-Segregation-AI/vision_bridge.py: USB camera + YOLO + ArUco).
 
 import { World } from './world.js';
+import { YoloDetector } from './detector.js';
+import { AR } from '../vendor/aruco.mjs';
 import { fk } from './kinematics.js';
 import {
   solveHomography, applyH, invertH, reprojError, cornerMarkers, layoutArea, boxToWorld, Tracker, planPick,
@@ -170,18 +172,20 @@ export function initVision(app) {
 
   // Tell the bridge to run YOLO only on the mat (+ margin): small objects stay
   // large enough for the model, and the 3D-printed arm itself is never "plastic".
-  function sendRoi() {
-    if (V.source !== 'bridge' || V.ws?.readyState !== WebSocket.OPEN) return;
-    if (!V.cal?.Hinv) return V.ws.send(JSON.stringify({ c: 'roi', roi: null }));
+  /** Pixel rectangle around the pick area (+ margin): YOLO only looks there. */
+  function roiPx() {
+    if (!V.cal?.Hinv) return null;
     const a = V.settings.area;
     const m = 25;
     const pts = [[a.x0 - m, a.y0 - m], [a.x0 - m, a.y1 + m], [a.x1 + m, a.y0 - m], [a.x1 + m, a.y1 + m]].map((p) => applyH(V.cal.Hinv, p));
     const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
     const W = V.cal.w || V.last?.w || 1e9, Hh = V.cal.h || V.last?.h || 1e9;
-    V.ws.send(JSON.stringify({
-      c: 'roi',
-      roi: [Math.max(0, Math.min(...xs)), Math.max(0, Math.min(...ys)), Math.min(W, Math.max(...xs)), Math.min(Hh, Math.max(...ys))].map(Math.round),
-    }));
+    const r = [Math.max(0, Math.min(...xs)), Math.max(0, Math.min(...ys)), Math.min(W, Math.max(...xs)), Math.min(Hh, Math.max(...ys))].map(Math.round);
+    return r[2] - r[0] > 32 && r[3] - r[1] > 32 ? r : null;
+  }
+  function sendRoi() {
+    if (V.source !== 'bridge' || V.ws?.readyState !== WebSocket.OPEN) return;
+    V.ws.send(JSON.stringify({ c: 'roi', roi: roiPx() }));
   }
 
   $('#calMarkers').onclick = () => {
@@ -219,6 +223,7 @@ export function initVision(app) {
       V.ws = null;
       w.close();
     }
+    stopWebcam();
     V.source = src;
     V.last = null;
     V.img = null;
@@ -226,10 +231,119 @@ export function initVision(app) {
     store.set('source', src);
     $('#visUrl').hidden = src !== 'bridge';
     $('#visConnect').hidden = src !== 'bridge';
+    $('#camSelect').hidden = src !== 'webcam';
     world.setSimVisible(src === 'sim');
     loadCal();
     if (src === 'bridge') connectBridge();
+    if (src === 'webcam') startWebcam();
   }
+
+  // ------------------------------------------------------------ webcam + YOLO + ArUco, all in the browser
+  const arDetector = new AR.Detector({ dictionaryName: 'ARUCO_4X4_1000' }); // IDs 0-49 = OpenCV DICT_4X4_50
+  function feedMsg(text) {
+    $('#feedMsg').hidden = !text;
+    $('#feedMsg').textContent = text || '';
+  }
+  function stopWebcam() {
+    V.camRun = (V.camRun || 0) + 1; // stops the running loop
+    V.stream?.getTracks().forEach((t) => t.stop());
+    V.stream = null;
+  }
+  async function loadModel() {
+    if (V.yolo || V.yoloLoading) return;
+    V.yoloLoading = true;
+    try {
+      V.yolo = await new YoloDetector().load('models/plastic.onnx');
+      V.modelError = null;
+      appLog(`YOLO model loaded in the browser (${V.yolo.size}px, ${V.yolo.threads} thread${V.yolo.threads > 1 ? 's' : ''})`);
+    } catch (e) {
+      V.modelError = e.message || String(e);
+      appLog(`Plastic detector: ${V.modelError}`, 'warn');
+    } finally {
+      V.yoloLoading = false;
+    }
+  }
+  async function listCameras() {
+    try {
+      const cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
+      const sel = $('#camSelect');
+      const cur = V.camId || store.get('camId', '');
+      sel.innerHTML = cams.map((c, i) => `<option value="${esc(c.deviceId)}">${esc(c.label || `Camera ${i + 1}`)}</option>`).join('');
+      if (cams.some((c) => c.deviceId === cur)) sel.value = cur;
+    } catch {}
+  }
+  async function startWebcam() {
+    stopWebcam();
+    const run = V.camRun;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      feedMsg(window.isSecureContext ? 'This browser has no camera access.' : 'Camera needs http://localhost (open the app with npm start on this PC).');
+      return;
+    }
+    feedMsg('Opening camera… (allow camera access if the browser asks)');
+    const camId = store.get('camId', '');
+    try {
+      V.stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { deviceId: camId ? { exact: camId } : undefined, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      });
+    } catch (e) {
+      if (camId) {
+        store.set('camId', '');
+        return startWebcam(); // saved camera gone: use the default one
+      }
+      feedMsg(`Camera: ${e.message || e.name}`);
+      return;
+    }
+    if (run !== V.camRun) return V.stream.getTracks().forEach((t) => t.stop());
+    V.camId = V.stream.getVideoTracks()[0]?.getSettings().deviceId;
+    listCameras();
+    V.video ||= Object.assign(document.createElement('video'), { muted: true, playsInline: true });
+    V.video.srcObject = V.stream;
+    await V.video.play().catch(() => {});
+    V.frame ||= document.createElement('canvas');
+    loadModel();
+    feedMsg('');
+    let markerT = 0;
+    let markers = [];
+    while (run === V.camRun) {
+      const v = V.video;
+      const w = v.videoWidth, h = v.videoHeight;
+      if (!w) {
+        await new Promise((r) => setTimeout(r, 100));
+        continue;
+      }
+      if (V.frame.width !== w || V.frame.height !== h) Object.assign(V.frame, { width: w, height: h });
+      const fx = V.frame.getContext('2d', { willReadFrequently: true });
+      fx.drawImage(v, 0, 0, w, h);
+      const now = performance.now();
+      // markers: often while calibrating, then once a second
+      if (now - markerT > (V.cal?.H ? 1000 : 300)) {
+        markerT = now;
+        markers = arDetector.detect(fx.getImageData(0, 0, w, h)).map((m) => ({
+          id: m.id,
+          x: m.corners.reduce((s, c) => s + c.x, 0) / 4,
+          y: m.corners.reduce((s, c) => s + c.y, 0) / 4,
+        }));
+      }
+      let boxes = [];
+      if (V.yolo && !V.busy) {
+        try {
+          boxes = await V.yolo.detect(V.frame, w, h, roiPx(), V.settings.conf ?? 0.5);
+        } catch (e) {
+          V.modelError = `detection failed: ${e.message || e}`;
+          V.yolo = null;
+          appLog(V.modelError, 'error');
+        }
+      }
+      if (run !== V.camRun) break;
+      onVision({ t: 'vision', src: 'webcam', w, h, boxes, markers, names: V.yolo?.names, model: !!V.yolo, modelError: V.modelError, ms: V.yolo?.ms });
+      await new Promise((r) => setTimeout(r, V.yolo ? 0 : 60));
+    }
+  }
+  $('#camSelect').onchange = (e) => {
+    store.set('camId', e.target.value);
+    startWebcam();
+  };
 
   function connectBridge() {
     const url = $('#visUrl').value.trim() || 'ws://localhost:8765/ws';
@@ -296,7 +410,8 @@ export function initVision(app) {
       V.frames = 0;
       V.fpsT = now;
     }
-    $('#feedMsg').hidden = true;
+    if (m.src !== 'webcam' || !m.modelError) $('#feedMsg').hidden = true;
+    else feedMsg(`Camera OK — ${m.modelError}`);
     if (V.cal?.w && (V.cal.w !== m.w || V.cal.h !== m.h)) {
       appLog(`Camera resolution changed (${m.w}x${m.h}) — recalibrate`, 'warn');
       V.cal = null;
@@ -320,7 +435,8 @@ export function initVision(app) {
     $('#visStat').textContent =
       `${m.src === 'sim' ? 'SIM' : 'CAM'} ${m.w}×${m.h} · ${V.fps.toFixed(0)} fps · ${m.boxes.length} det · ` +
       `${m.markers?.length || 0}/4 markers · ${V.tracker.tracks.filter((t) => t.pickable).length} pickable` +
-      (m.src !== 'sim' && m.model === false ? ' · NO MODEL' : '');
+      (m.src !== 'sim' && m.model === false ? ' · NO MODEL (markers only)' : '') +
+      (m.ms ? ` · YOLO ${m.ms.toFixed(0)} ms` : '');
     autoPick(now);
   }
 
@@ -333,6 +449,7 @@ export function initVision(app) {
       canvas.height = m.h;
     }
     if (V.source === 'sim') world.renderTo(ctx);
+    else if (V.source === 'webcam' && V.frame?.width) ctx.drawImage(V.frame, 0, 0, m.w, m.h);
     else if (V.img) ctx.drawImage(V.img, 0, 0, m.w, m.h);
     else {
       ctx.fillStyle = '#000';
@@ -607,7 +724,8 @@ export function initVision(app) {
   // ------------------------------------------------------------ boot
   const fromBridge = location.port === '8765';
   $('#visUrl').value = store.get('url', fromBridge ? `ws://${location.host}/ws` : 'ws://localhost:8765/ws');
-  const src = fromBridge ? 'bridge' : store.get('source', 'sim');
+  const canCam = !!navigator.mediaDevices?.getUserMedia && window.isSecureContext;
+  const src = /[?&]sim\b/.test(location.search) ? 'sim' : store.get('source', canCam ? 'webcam' : 'sim');
   $('#visSource').value = src;
   setSource(src);
   if (/[?&]autopick\b/.test(location.search)) $('#autoPick').checked = true; // ?autopick for demos/tests

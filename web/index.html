@@ -110,9 +110,11 @@
       <div class="tab" data-tab="vision">
         <div class="row gap wrap">
           <select id="visSource" title="Camera source">
+            <option value="webcam">Webcam (detect in browser)</option>
             <option value="sim">Simulated camera</option>
-            <option value="bridge">PC camera (vision bridge)</option>
+            <option value="bridge">Python vision bridge</option>
           </select>
+          <select id="camSelect" class="grow" title="Which camera"></select>
           <input id="visUrl" class="grow mono" placeholder="ws://localhost:8765/ws" spellcheck="false">
           <button class="btn" id="visConnect">Connect</button>
         </div>
@@ -164,6 +166,7 @@
             <label>Bin Y<input type="number" data-ps="bin.y" step="5"></label>
             <label>Drop Z<input type="number" data-ps="bin.z" step="5"></label>
             <label>Confirm frames<input type="number" data-ps="minHits" step="1" min="1"></label>
+            <label>Detect conf.<input type="number" data-ps="conf" step="0.05" min="0.05" max="0.95"></label>
           </div>
           <label class="check"><input type="checkbox" data-ps="alignRoll"> Turn the wrist to grip long objects across</label>
         </details>

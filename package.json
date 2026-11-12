@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node tools/start.mjs",
+    "bridge": "node tools/bridge.mjs",
     "web": "node tools/serve.mjs",
     "test": "node --test web/tests/",
     "embed": "node tools/embed-web.mjs",
