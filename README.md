@@ -201,6 +201,29 @@ The Vision tab's **Webcam (detect in browser)** source does everything in the pa
 - **Small objects from a high camera:** the **Zoom tiles** setting runs the model on overlapping tiles, so small items appear 2–3× bigger to it. *Auto* uses 2×2 tiles inside the calibrated pick area, on the GPU only. Each tile costs one extra model run. The small *model view* square shows exactly what the model sees.
 - **The real fix for small objects is training data from your actual setup.** Use **Save frame for training** to collect frames from the mounted camera, label them in Roboflow, retrain, then run `python export_onnx.py` again.
 
+### Running on the HP Omen (Windows + NVIDIA RTX)
+**In the browser (recommended):** use Chrome or Edge, run `npm start`, and use **Webcam (detect in browser)**. WebGPU runs on the RTX through DirectX 12. The detector asks for the *high-performance* GPU, and the Log and status line show which GPU it got, e.g. `GPU (nvidia ampere …)`.
+
+**If it reports Intel, or "integrated GPU" in the Log:**
+1. Open Windows **Settings → System → Display → Graphics**.
+2. Add Chrome (or Edge) and set it to **High performance**, then restart the browser.
+3. Optionally, in **OMEN Gaming Hub**, set the GPU mode to **Discrete** for the best speed.
+4. Make sure the NVIDIA driver is up to date.
+
+A fast GPU (under 15 ms per tile) automatically gets zoom tiles over the whole frame, up to 3×3, even before calibration. That's better for small objects seen from a high camera.
+
+**Python alternative on the RTX (CUDA):**
+```bat
+cd robotic-arm\Plastic-Segregation-AI
+py -3.11 -m venv .venv
+.venv\Scripts\activate
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+pip install -r requirements.txt
+cd ..
+npm run bridge -- --device 0
+```
+Then choose **Python vision bridge** in the Vision tab.
+
 ### Running it
 
 **One command:**

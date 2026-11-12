@@ -63,9 +63,11 @@ export function decodeYolo(data, dims, { conf = 0.5, iou = 0.45, maxDet = 100 } 
 
 // ------------------------------------------------------------------ image correction
 export const ENHANCE_DEFAULTS = {
-  auto: true, // stretch contrast between the 1st and 99.5th brightness percentile (fixes a washed-out picture)
-  gamma: 0, // 0 = automatic brightness; otherwise 0.5 (brighter) .. 2 (darker)
-  sat: 1.15, // colour saturation
+  // Off by default: on the user's washed-out test frame the model scored the plastic higher on the raw
+  // image (0.75) than after any correction (0.68-0.70). Turn on only if your lighting is much worse.
+  auto: false, // stretch contrast between the 1st and 99.5th brightness percentile
+  gamma: 0, // 0 = automatic brightness (only with auto); otherwise 0.5 (brighter) .. 2 (darker)
+  sat: 1, // colour saturation
   wb: false, // grey-world white balance (fixes a blue/yellow cast)
 };
 
@@ -179,15 +181,22 @@ export class YoloDetector {
     if (!res.ok) throw new Error(`model not found at web/${url} — run "python export_onnx.py" in Plastic-Segregation-AI`);
     const buf = new Uint8Array(await res.arrayBuffer());
     const base = new URL('../vendor/ort/', import.meta.url).href;
-    // 1) GPU (WebGPU) — fastest, Chrome/Edge on Mac & Windows
-    if (backend !== 'cpu' && navigator.gpu && (await navigator.gpu.requestAdapter().catch(() => null))) {
+    // 1) GPU (WebGPU) — fastest. Chrome/Edge: Metal on Mac, DirectX 12 on Windows (NVIDIA RTX etc.).
+    //    Ask for the high-performance GPU so gaming laptops use the NVIDIA card, not the integrated one.
+    const adapter = backend !== 'cpu' && navigator.gpu ? await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' }).catch(() => null) : null;
+    if (adapter) {
       try {
         const ort = await import('../vendor/ort/ort.webgpu.min.mjs');
         ort.env.wasm.wasmPaths = base;
         ort.env.wasm.numThreads = 1;
+        ort.env.webgpu.powerPreference = 'high-performance';
+        ort.env.webgpu.adapter = adapter; // use exactly this adapter
         this.session = await ort.InferenceSession.create(buf, { executionProviders: ['webgpu', 'wasm'], graphOptimizationLevel: 'all' });
         this.ort = ort;
-        this.backend = 'GPU (WebGPU)';
+        const info = adapter.info || (await adapter.requestAdapterInfo?.().catch(() => null)) || {};
+        this.gpuName = [info.vendor, info.architecture, info.description].filter(Boolean).join(' ').trim() || 'unknown GPU';
+        this.integrated = /intel|integrated|uhd|iris|radeon\(tm\) graphics/i.test(this.gpuName) && !/nvidia/i.test(this.gpuName);
+        this.backend = `GPU (${this.gpuName})`;
       } catch (e) {
         console.warn('WebGPU backend failed, using CPU', e);
         this.session = null;

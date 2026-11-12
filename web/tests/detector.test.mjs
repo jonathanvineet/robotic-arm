@@ -87,7 +87,7 @@ const lum = (d) => {
 test('washed-out frame: auto contrast + brightness restore a full range and mid-grey average', () => {
   const d = washedOut();
   const before = lum(d);
-  const P = computeEnhance(d, 64, 48);
+  const P = computeEnhance(d, 64, 48, null, { auto: true, gamma: 0, sat: 1.15, wb: false });
   applyEnhance(d, 64, 48, P);
   const after = lum(d);
   assert.ok(before.hi - before.lo < 90 && after.hi - after.lo > 200, `range ${before.hi - before.lo} -> ${after.hi - after.lo}`);
@@ -97,7 +97,7 @@ test('washed-out frame: auto contrast + brightness restore a full range and mid-
 test('enhancement only touches the given rectangle (letterbox padding stays 114)', () => {
   const d = washedOut(10, 10);
   for (let i = 0; i < 10; i++) d.set([114, 114, 114, 255], i * 4); // first row = padding
-  applyEnhance(d, 10, 10, computeEnhance(d, 10, 10, [0, 1, 10, 10]), [0, 1, 10, 10]);
+  applyEnhance(d, 10, 10, computeEnhance(d, 10, 10, [0, 1, 10, 10], { auto: true, sat: 1.15 }), [0, 1, 10, 10]);
   for (let i = 0; i < 10; i++) assert.deepEqual([...d.slice(i * 4, i * 4 + 3)], [114, 114, 114]);
 });
 

@@ -55,7 +55,9 @@ export function initVision(app) {
     attempts: [], // {x, y, n}: same spot picked again = the last grasp missed
   };
   V.settings.bin = { ...PICK_DEFAULTS.bin, ...(V.settings.bin || {}) };
-  V.settings.enh = { ...ENHANCE_DEFAULTS, ...(V.settings.enh || {}) };
+  // v2: correction off by default (raw frames scored best) — reset settings saved by older versions once
+  V.settings.enh = V.settings.enhV === 2 ? { ...ENHANCE_DEFAULTS, ...(V.settings.enh || {}) } : { ...ENHANCE_DEFAULTS };
+  V.settings.enhV = 2;
   V.settings.tiles ??= 'auto';
   V.settings.preview ??= true;
   V.tracker.minHits = V.settings.minHits;
@@ -259,6 +261,8 @@ export function initVision(app) {
       V.yolo = await new YoloDetector().load('models/plastic.onnx');
       V.modelError = null;
       appLog(`Plastic detector running in the browser on ${V.yolo.backend} (${V.yolo.size}px model)`);
+      if (V.yolo.integrated)
+        appLog('Running on the integrated GPU. On a gaming laptop set Chrome/Edge to "High performance" (Windows Settings → System → Display → Graphics) or switch the laptop to discrete-GPU mode, then reload.', 'warn');
     } catch (e) {
       V.modelError = e.message || String(e);
       appLog(`Plastic detector: ${V.modelError}`, 'warn');
@@ -357,9 +361,14 @@ export function initVision(app) {
           const gpu = /GPU/.test(V.yolo.backend);
           V.yolo.keepInput = true;
           // Auto: zoom tiles only inside the calibrated pick area (whole-frame tiling is too slow), GPU only
+          // Auto zoom tiles, sized to how fast this GPU is: a fast card (e.g. RTX, <15 ms/tile)
+          // tiles the whole frame even before calibration; slower GPUs only tile the pick area.
           const auto = V.settings.tiles === 'auto';
-          const tiles = auto ? (roi && gpu ? 'auto' : 1) : V.settings.tiles;
-          boxes = await V.yolo.detect(V.frame, w, h, roi, V.settings.conf ?? 0.5, { enhance: V.enh, tiles, maxTiles: auto ? 4 : 9 });
+          const perTile = V.yolo.ms && V.yolo.tiles?.length ? V.yolo.ms / V.yolo.tiles.length : 50;
+          const fast = gpu && perTile < 15;
+          const tiles = auto ? (gpu && (roi || fast) ? 'auto' : 1) : V.settings.tiles;
+          const maxTiles = auto ? (fast ? 9 : 4) : 9;
+          boxes = await V.yolo.detect(V.frame, w, h, roi, V.settings.conf ?? 0.5, { enhance: V.enh, tiles, maxTiles });
           const mv = $('#modelView');
           if (mv && V.yolo.canvas) mv.getContext('2d').drawImage(V.yolo.canvas, 0, 0, mv.width, mv.height);
         } catch (e) {
