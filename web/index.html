@@ -141,6 +141,8 @@
           <p class="hint" id="touchHint" hidden>Jog the fingertip down until it touches a spot on the table, then click that spot in the image. Do 4+ spots spread over the work area, then <b>Solve</b>.</p>
           <ul class="list" id="calPairs"></ul>
           <label class="check sm"><input type="checkbox" id="showGrid" checked> Show grid, front axis and reach ring</label>
+          <label class="check sm"><input type="checkbox" data-ps="heightFix"> Angled-camera correction (uses the camera position found from the markers)</label>
+          <label class="inline">Camera H-FOV <input type="number" data-ps="hfov" step="1" min="20" max="160"> ° <span class="muted">— only matters if the camera looks straight down; from the webcam's spec sheet</span></label>
           <h3>Corner markers <span class="muted" id="layDict"></span></h3>
           <div class="row gap wrap">
             <label class="inline">Corner distance B <input type="number" id="layB" step="10"> mm</label>

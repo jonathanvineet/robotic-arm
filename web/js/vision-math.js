@@ -166,6 +166,60 @@ export function reprojError(H, pairs) {
   return Math.sqrt(s / pairs.length);
 }
 
+// ------------------------------------------------------------------ camera pose from the markers
+/**
+ * Where the camera is (mm, robot frame), recovered from the pixel->table homography.
+ * Principal point = image centre, square pixels. The focal length is measured from
+ * the homography when the camera is tilted enough to tell; otherwise (looking
+ * straight down) it comes from hfovPrior — then only the height depends on it.
+ */
+export function cameraFromHomography(Hpw, w, h, hfovPrior = 70) {
+  const G = mul3([1, 0, -w / 2, 0, 1, -h / 2, 0, 0, 1], invertH(Hpw)); // world -> centred pixels
+  const col = (k) => [G[k], G[3 + k], G[6 + k]];
+  const [g1, g2, g3] = [col(0), col(1), col(2)];
+  const fPrior = w / 2 / Math.tan((hfovPrior * Math.PI) / 360);
+  const pose = (fx) => {
+    const Ki = (v) => [v[0] / fx, v[1] / fx, v[2]];
+    const a = Ki(g1), b = Ki(g2), c = Ki(g3);
+    const lam = 2 / (Math.hypot(...a) + Math.hypot(...b));
+    const r1 = a.map((v) => v * lam), r2 = b.map((v) => v * lam), t = c.map((v) => v * lam);
+    const r3 = cross(r1, r2);
+    let C = [-dot(r1, t), -dot(r2, t), -dot(r3, t)];
+    if (C[2] < 0) C = [C[0], C[1], -C[2]];
+    const axis = [r1[2], r2[2], r3[2]]; // optical axis in world
+    const tilt = (Math.acos(Math.min(1, Math.abs(axis[2]))) * 180) / Math.PI;
+    return { C, tilt, fx };
+  };
+  let res = pose(fPrior);
+  let focal = 'assumed';
+  if (res.tilt > 8) {
+    const est = [];
+    const d1 = g1[2] * g2[2];
+    if (Math.abs(d1) > 1e-15) est.push(-(g1[0] * g2[0] + g1[1] * g2[1]) / d1);
+    const d2 = g1[2] ** 2 - g2[2] ** 2;
+    if (Math.abs(d2) > 1e-15) est.push(-(g1[0] ** 2 + g1[1] ** 2 - g2[0] ** 2 - g2[1] ** 2) / d2);
+    const ok = est.filter((v) => v > 0 && Number.isFinite(v)).map(Math.sqrt).filter((f) => f > fPrior / 3 && f < fPrior * 3);
+    if (ok.length) {
+      res = pose(ok.reduce((s, v) => s + v, 0) / ok.length);
+      focal = 'measured';
+    }
+  }
+  const hfov = (2 * Math.atan(w / 2 / res.fx) * 180) / Math.PI;
+  return { pos: res.C, tilt: res.tilt, hfov, focal };
+}
+
+/**
+ * Angled-camera correction. A detection box centre is (roughly) where the
+ * object's middle — `centreZ` mm above the table — appears, but the table
+ * homography maps it onto the table, which pushes it away from the camera.
+ * Slide it back along the camera ray to that height.
+ */
+export function correctHeight(o, camPos, centreZ) {
+  if (!camPos || !(centreZ > 0) || camPos[2] <= centreZ) return o;
+  const k = centreZ / camPos[2];
+  return { ...o, x: o.x + (camPos[0] - o.x) * k, y: o.y + (camPos[1] - o.y) * k, raw: { x: o.x, y: o.y } };
+}
+
 // ------------------------------------------------------------------ detections -> world
 /**
  * box: [x1,y1,x2,y2,conf,cls] in pixels. Returns the object's table position,
@@ -245,6 +299,8 @@ export const PICK_DEFAULTS = {
   gripOpen: null, // servo angle; null = gripper max
   gripClose: null, // servo angle; null = gripper min + 15
   alignRoll: false, // turn the wrist to grip across long objects (only for arms whose roll comes AFTER pitch)
+  heightFix: true, // angled-camera correction (see correctHeight)
+  hfov: 70, // camera horizontal field of view guess (deg), used when looking straight down
   pitches: Array.from({ length: 25 }, (_, i) => 180 - i * 5), // 180 (straight down) .. 60
 };
 

@@ -74,7 +74,7 @@ Optional settings are in `config.h`: Wi-Fi network, pin numbers and default limi
 
 ## 4. Web app
 
-Run it without hardware: `npm start`, then open http://localhost:8080. It connects to the **Simulator** automatically.
+Run it without hardware: `npm run web` (or `npm start`, which also starts the camera bridge). It connects to the **Simulator** automatically.
 
 | Area | What it does |
 |---|---|
@@ -98,7 +98,7 @@ If the last browser disconnects while the arm is moving, the arm brakes to a sto
 ## 5. Tests
 
 ```sh
-npm test          # 38 tests: motion planner, kinematics, simulator protocol,
+npm test          # 40 tests: motion planner, kinematics, simulator protocol,
                   # vision maths (homography, tracker, pick planning), and compiles the
                   # firmware planner natively to check the simulator matches it sample-for-sample
 cd firmware/tests/native && g++ -std=c++17 -I../../RoboArm test_motion.cpp -o t && ./t
@@ -193,22 +193,43 @@ npm run embed
 
 ### Running it
 
-**Simulator only (Mac or Windows):** run `npm start`, open the Vision tab, and tick **Auto pick**. Use *Drop 3 plastics* to add more objects; they land anywhere around the robot.
-The camera calibrates itself from the virtual corner markers the first time.
+**One command for everything:**
+```sh
+npm start                     # vision bridge (camera + YOLO + markers) + web app, opens the browser
+npm start -- --camera 1       # other camera; any vision_bridge.py option goes after --
+npm start -- --device 0       # NVIDIA GPU for YOLO
+npm run web                   # web app only (simulator), no Python needed
+```
+`npm start` finds Python (preferring `Plastic-Segregation-AI/.venv` if it exists) and runs `vision_bridge.py`, which also serves the web app at **http://localhost:8765**. It keeps working when things are missing:
+- **No camera plugged in:** the app still runs and the bridge retries the camera every 5 s.
+- **YOLO (ultralytics) not installed:** markers-only mode, with a message telling you what to install.
+- **No Python or OpenCV:** it falls back to the plain web server so the simulator works, and prints what to install.
 
-**Real camera on Windows:**
+**First time on Windows:**
 ```bat
 cd robotic-arm\Plastic-Segregation-AI
 py -3.11 -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-python make_markers.py
-python vision_bridge.py --camera 0            REM add --device 0 for an NVIDIA GPU
+cd ..
+npm start
 ```
-Then open **http://localhost:8765**. In the header, connect to the arm (*Wi-Fi* with the arm's IP, or *USB serial*). In the Vision tab, choose **PC camera**, calibrate, then use **Pick now** or **Auto pick**.
+In the app, connect to the arm in the header (*Wi-Fi* with the arm's IP, or *USB serial*). In the Vision tab, use **PC camera**, calibrate, then **Pick now** or **Auto pick**. To work without hardware, switch the Vision source to *Simulated camera* and the header to *Simulator*.
 
-You can also feed the real camera into the **simulated arm**: keep the header on *Simulator* to rehearse with real detections before risking the hardware.
+### Camera position and the angled-camera correction
+The camera doesn't have to be straight above the robot. When you calibrate, the app works out where the camera is from the 4 markers: X, Y, height and tilt, plus the lens's field of view whenever the camera is tilted. Check it against a tape measure: the log prints it, and in the simulator a yellow wire ball marks it in 3D.
 
-`vision_bridge.py` options: `--no-model` (markers only, no YOLO), `--image photo.png` / `--video clip.mp4` (no camera), `--conf 0.5`, `--fps 10`.
+With that camera position, **Angled-camera correction** (on by default, under Calibration) moves each detection back along the camera's line of sight to the object's mid-height (Grip Z). This removes the error from seeing objects from the side:
+
+| Camera | Worst error without | With correction |
+|---|---|---|
+| Straight above, 1150 mm | 4 mm | 0.4 mm |
+| 300 mm off-centre (15° tilt) | 8 mm | 0.5 mm |
+| From a corner (33° tilt) | 15 mm | 0.6 mm |
+| Steep side view (45° tilt) | 22 mm | 0.8 mm |
+
+These numbers are for a 30 mm-tall object, with Grip Z set to its mid-height. If the camera looks straight down, enter your webcam's horizontal FOV in Calibration; it only affects the computed height in that case. A steep angle still has drawbacks: the arm hides more of the table and far objects get fewer pixels. Mostly-overhead remains best.
+
+`vision_bridge.py` options: `--no-model` (markers only), `--image photo.png` / `--video clip.mp4` (no camera), `--dict DICT_5X5_100` (other marker set), `--conf 0.5`, `--fps 10`, `--imgsz 960`.
 
 **Safety:** auto-pick only starts when the arm is idle, connected and not E-stopped. It needs an object to be seen in 5 consecutive frames. It gives up on a spot after 3 missed grasps. **Space** or **Stop** cancels a pick immediately.

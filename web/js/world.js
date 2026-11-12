@@ -389,6 +389,16 @@ export class World {
     ctx.drawImage(this.off, 0, 0, this.cam.w, this.cam.h);
   }
 
+  /** Where calibration thinks the camera is (yellow wire ball) — should sit on the real camera. */
+  showCamEstimate(pos) {
+    if (!this.camEst) {
+      this.camEst = new THREE.Mesh(new THREE.SphereGeometry(28, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffd166, wireframe: true }));
+      this.scene.add(toHelperLayer(this.camEst));
+    }
+    this.camEst.visible = !!pos;
+    if (pos) this.camEst.position.copy(T(...pos));
+  }
+
   // ---------------------------------------------------------------- detections in 3D
   showTracks(tracks, highlight = null) {
     this.detGroup.clear();

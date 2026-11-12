@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node tools/serve.mjs",
+    "start": "node tools/start.mjs",
+    "web": "node tools/serve.mjs",
     "test": "node --test web/tests/",
     "embed": "node tools/embed-web.mjs",
     "build:firmware": "node tools/embed-web.mjs && sh tools/compile-firmware.sh"

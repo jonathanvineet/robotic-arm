@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   makeCamera, solveHomography, applyH, invertH, reprojError, cornerMarkers, layoutArea, boxToWorld,
-  Tracker, planPick, PICK_DEFAULTS, rollFor, LAYOUT_DEFAULT,
+  Tracker, planPick, PICK_DEFAULTS, rollFor, LAYOUT_DEFAULT, cameraFromHomography, correctHeight,
 } from '../js/vision-math.js';
 import { fk, DEFAULT_LINKS } from '../js/kinematics.js';
 import { defaultConfig } from '../js/sim.js';
@@ -115,4 +115,41 @@ test('wrist roll alignment (only when enabled)', () => {
   assert.equal(rollFor({ elongated: false, angle: 30 }, 0, J, on), J[4].zero);
   assert.equal(Math.abs(rollFor({ elongated: true, angle: 0 }, 0, J, on) - J[4].zero), 90);
   assert.equal(rollFor({ elongated: true, angle: 90 }, 0, J, on), J[4].zero);
+});
+
+const calib = (cam) => solveHomography(cornerMarkers().map((m) => ({ ...cam.project([m.x, m.y, 0]), x: m.x, y: m.y })));
+
+test('camera position is recovered from the 4 markers (any mount)', () => {
+  const mounts = [
+    { x: 0, y: 0, z: 1150, lookX: 0, lookY: 0 }, // straight down: needs the FOV prior
+    { x: -500, y: 300, z: 900, lookX: 0, lookY: 0, hfov: 64 }, // angled from a corner: focal measured
+    { x: 0, y: -700, z: 700, lookX: 0, lookY: 0, hfov: 75, roll: 20 }, // steep side view
+  ];
+  for (const m of mounts) {
+    const cam = makeCamera(m);
+    const est = cameraFromHomography(calib(cam), cam.w, cam.h, m.hfov ?? 70);
+    const err = Math.hypot(...est.pos.map((v, i) => v - cam.pos[i]));
+    assert.ok(err < 1e-3, `mount ${JSON.stringify(m)}: off by ${err} mm (${est.focal})`);
+    if (est.tilt > 8) assert.equal(est.focal, 'measured');
+    assert.ok(Math.abs(est.hfov - (m.hfov ?? 70)) < 1e-3);
+  }
+});
+
+test('angled camera: height correction removes the side-view error', () => {
+  const cam = makeCamera({ x: 0, y: -700, z: 700, lookX: 0, lookY: 0, hfov: 75 });
+  const H = calib(cam);
+  const est = cameraFromHomography(H, cam.w, cam.h, 70); // wrong FOV guess on purpose: focal is measured
+  // a 30 mm-tall, 40 mm-wide object (3D box) at several places
+  let worstRaw = 0, worstFix = 0;
+  for (const [x, y] of [[250, 0], [0, 250], [-200, -150], [150, 200], [0, -250]]) {
+    const pts = [];
+    for (const dx of [-20, 20]) for (const dy of [-20, 20]) for (const z of [0, 30]) pts.push(cam.project([x + dx, y + dy, z]));
+    const box = [Math.min(...pts.map((p) => p.px)), Math.min(...pts.map((p) => p.py)), Math.max(...pts.map((p) => p.px)), Math.max(...pts.map((p) => p.py)), 0.9, 0];
+    const raw = boxToWorld(H, box);
+    const fixed = correctHeight(raw, est.pos, 15);
+    worstRaw = Math.max(worstRaw, Math.hypot(raw.x - x, raw.y - y));
+    worstFix = Math.max(worstFix, Math.hypot(fixed.x - x, fixed.y - y));
+  }
+  assert.ok(worstRaw > 12, `uncorrected error should be large here (${worstRaw.toFixed(1)} mm)`);
+  assert.ok(worstFix < 3, `corrected error ${worstFix.toFixed(1)} mm`);
 });

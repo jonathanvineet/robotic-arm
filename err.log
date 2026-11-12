@@ -1,0 +1,114 @@
+[73000:1361578:1113/030955.047344:INFO:components/enterprise/browser/controller/chrome_browser_cloud_management_controller.cc:241] No machine level policy manager exists.
+[73017:1361687:1113/030956.483693:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361748:1113/030956.485731:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361687:1113/030956.488311:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361748:1113/030956.488403:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361687:1113/030956.488575:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361748:1113/030956.488682:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361687:1113/030956.488827:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361748:1113/030956.488902:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361687:1113/030956.489054:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361748:1113/030956.489133:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361687:1113/030956.506234:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361748:1113/030956.506285:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361687:1113/030956.628356:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361748:1113/030956.628488:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+Trying to load the allocator multiple times. This is *not* supported.
+[73017:1361687:1113/031000.090609:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361748:1113/031000.091206:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361687:1113/031001.024200:ERROR:gpu/command_buffer/service/gl_utils.cc:431] [.WebGL-0x124000d1400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[73017:1361687:1113/031001.776492:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361748:1113/031001.776611:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361687:1113/031002.404331:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361748:1113/031002.406216:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361687:1113/031002.791995:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361748:1113/031002.792352:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361687:1113/031002.906225:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361748:1113/031002.906459:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361687:1113/031003.200740:ERROR:gpu/command_buffer/service/gl_utils.cc:431] [.WebGL-0x124000d1400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[73017:1361687:1113/031003.201235:ERROR:gpu/command_buffer/service/gl_utils.cc:431] [.WebGL-0x124000d1400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[73017:1361687:1113/031003.258957:ERROR:gpu/command_buffer/service/gl_utils.cc:431] [.WebGL-0x124000d1400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+[73017:1361687:1113/031003.350620:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361748:1113/031003.350744:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361687:1113/031004.102949:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361748:1113/031004.105120:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73000:1361578:1113/031004.280511:INFO:CONSOLE:0] "[DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o", source: http://localhost:8099/?autopick&debug (0)
+[73000:1361578:1113/031004.321462:INFO:CONSOLE:0] "[.WebGL-0x124000d1400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels", source: http://localhost:8099/?autopick&debug (0)
+[73000:1361578:1113/031004.321505:INFO:CONSOLE:0] "[.WebGL-0x124000d1400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels", source: http://localhost:8099/?autopick&debug (0)
+[73000:1361578:1113/031004.321524:INFO:CONSOLE:0] "[.WebGL-0x124000d1400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels", source: http://localhost:8099/?autopick&debug (0)
+[73000:1361578:1113/031004.321539:INFO:CONSOLE:0] "[.WebGL-0x124000d1400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)", source: http://localhost:8099/?autopick&debug (0)
+[73017:1361687:1113/031004.499469:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73017:1361748:1113/031004.499632:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[73000:1361578:1113/031006.639357:WARNING:services/device/hid/hid_collection.cc:257] encountered report item with invalid report size (16384>32)
+[73000:1361578:1113/031006.639689:WARNING:services/device/hid/hid_collection.cc:257] encountered report item with invalid report size (16384>32)
+[73000:1361578:1113/031006.639754:WARNING:services/device/hid/hid_collection.cc:257] encountered report item with invalid report size (16384>32)
+[73000:1361578:1113/031006.639800:WARNING:services/device/hid/hid_collection.cc:257] encountered report item with invalid report size (16384>32)
+[73000:1361578:1113/031006.639844:WARNING:services/device/hid/hid_collection.cc:257] encountered report item with invalid report size (16384>32)
+[73000:1361578:1113/031006.639920:WARNING:services/device/hid/hid_collection.cc:257] encountered report item with invalid report size (16384>32)
+[73000:1361578:1113/031006.640006:WARNING:services/device/hid/hid_collection.cc:257] encountered report item with invalid report size (16024>32)
+[73000:1361578:1113/031006.640016:WARNING:services/device/hid/hid_collection.cc:257] encountered report item with invalid report size (1144>32)
+[73000:1361578:1113/031006.640397:WARNING:services/device/hid/hid_collection.cc:257] encountered report item with invalid report size (50>32)
+[73000:1361578:1113/031007.141790:INFO:CONSOLE:465] "[vision] pick 191.3 70.4 grip tcp {"x":191.28641034487592,"y":70.44070422048513,"z":13.999999999999972}", source: http://localhost:8099/js/vision.js (465)
+[73000:1361578:1113/031011.086913:INFO:CONSOLE:308] "[world] close at tcp 191.2 70.6 13.9 objs table:191,-107 table:105,-177 table:190,70", source: http://localhost:8099/js/world.js (308)
+Created TensorFlow Lite XNNPACK delegate for CPU.
+[73247:1363045:1113/031015.065710:VERBOSE1:chrome/updater/updater.cc:380] Version: 159.0.8140.0, opt, ARM_64, command line: /Users/jonathan/Library/Application Support/Google/GoogleUpdater/159.0.8140.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --wake-all --enable-logging --vmodule=*/components/update_client/*=2,*/chrome/enterprise_companion/*=2,*/chrome/updater/*=2
+[73247:1363045:1113/031015.066699:VERBOSE1:chrome/updater/updater.cc:383] OS version: 27.2.0, arch: arm64, System uptime (seconds): 88505, parent pid: 73000
+[73247:1363045:1113/031015.069511:VERBOSE1:chrome/updater/updater.cc:388] Available disk space in install directory (/Users/jonathan/Library/Application Support/Google/GoogleUpdater): 18237906944B (16.985GiB) / 494384795648B (460.432GiB)
+[73247:1363045:1113/031015.069615:VERBOSE1:chrome/updater/updater.cc:392] Available disk space in temporary directory (/var/folders/l1/smgg255j1w35801xz8dwcbkh0000gn/T/): 18237906944B (16.985GiB) / 494384795648B (460.432GiB)
+[73247:1363045:1113/031015.069839:VERBOSE2:chrome/updater/event_history.cc:266] Emitted a UPDATER_PROCESS START event to the history log
+[73249:1363049:1113/031015.086816:VERBOSE1:chrome/updater/updater.cc:380] Version: 159.0.8140.0, opt, ARM_64, command line: /Users/jonathan/Library/Application Support/Google/GoogleUpdater/159.0.8140.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --crash-handler --database=/Users/jonathan/Library/Application Support/Google/GoogleUpdater/159.0.8140.0/Crashpad --url=https://clients2.google.com/cr/report --annotation=prod=Update4 --annotation=ver=159.0.8140.0 --attachment=/Users/jonathan/Library/Application Support/Google/GoogleUpdater/updater.log --attachment=/Users/jonathan/Library/Application Support/Google/GoogleUpdater/updater_history.jsonl --handshake-fd=6 --enable-logging --vmodule=*/components/update_client/*=2,*/chrome/enterprise_companion/*=2,*/chrome/updater/*=2
+[73249:1363049:1113/031015.088508:VERBOSE1:chrome/updater/updater.cc:383] OS version: 27.2.0, arch: arm64, System uptime (seconds): 88505, parent pid: 1
+[73249:1363049:1113/031015.093594:VERBOSE1:chrome/updater/updater.cc:388] Available disk space in install directory (/Users/jonathan/Library/Application Support/Google/GoogleUpdater): 18237886464B (16.985GiB) / 494384795648B (460.432GiB)
+[73249:1363049:1113/031015.093653:VERBOSE1:chrome/updater/updater.cc:392] Available disk space in temporary directory (/var/folders/l1/smgg255j1w35801xz8dwcbkh0000gn/T/): 18237886464B (16.985GiB) / 494384795648B (460.432GiB)
+[73249:1363049:1113/031015.093766:VERBOSE2:chrome/updater/event_history.cc:266] Emitted a UPDATER_PROCESS START event to the history log
+[73247:1363045:1113/031015.094644:VERBOSE1:chrome/updater/crash_reporter.cc:121] Crash handler launched and ready.
+[73247:1363045:1113/031015.097070:VERBOSE1:chrome/updater/crash_client.cc:109] Found 0 completed crash reports
+[73247:1363045:1113/031015.097159:VERBOSE1:chrome/updater/crash_client.cc:132] Found 0 pending crash reports
+[73247:1363045:1113/031015.097251:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/jonathan/Library/Application Support/Google/RLZ/Crashpad/settings.dat: No such file or directory (2)
+[73247:1363045:1113/031015.097265:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/jonathan/Library/Application Support/Google/consentOptions/Crashpad/settings.dat: No such file or directory (2)
+[73247:1363045:1113/031015.097301:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/jonathan/Library/Application Support/Google/discovery/Crashpad/settings.dat: No such file or directory (2)
+[73247:1363045:1113/031015.097337:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/jonathan/Library/Application Support/Google/AndroidStudio2026.2.2/Crashpad/settings.dat: No such file or directory (2)
+[73247:1363045:1113/031015.097364:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/jonathan/Library/Application Support/Google/Chrome-headless/Crashpad/settings.dat: No such file or directory (2)
+[73247:1363045:1113/031015.097379:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/jonathan/Library/Application Support/Google/AndroidStudio2025.3.1/Crashpad/settings.dat: No such file or directory (2)
+[73247:1363045:1113/031015.097401:VERBOSE1:chrome/updater/updater.cc:107] Crash reporting initialized.
+[73247:1363057:1113/031015.097794:VERBOSE1:chrome/updater/app/app_wakeall.cc:58] Launching `/Users/jonathan/Library/Application Support/Google/GoogleUpdater/159.0.8140.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --wake`
+[73250:1363063:1113/031015.111199:VERBOSE1:chrome/updater/updater.cc:380] Version: 159.0.8140.0, opt, ARM_64, command line: /Users/jonathan/Library/Application Support/Google/GoogleUpdater/159.0.8140.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --wake --enable-logging --vmodule=*/components/update_client/*=2,*/chrome/enterprise_companion/*=2,*/chrome/updater/*=2
+[73250:1363063:1113/031015.112278:VERBOSE1:chrome/updater/updater.cc:383] OS version: 27.2.0, arch: arm64, System uptime (seconds): 88505, parent pid: 73247
+[73250:1363063:1113/031015.114688:VERBOSE1:chrome/updater/updater.cc:388] Available disk space in install directory (/Users/jonathan/Library/Application Support/Google/GoogleUpdater): 18237853696B (16.985GiB) / 494384795648B (460.432GiB)
+[73250:1363063:1113/031015.114725:VERBOSE1:chrome/updater/updater.cc:392] Available disk space in temporary directory (/var/folders/l1/smgg255j1w35801xz8dwcbkh0000gn/T/): 18237853696B (16.985GiB) / 494384795648B (460.432GiB)
+[73250:1363063:1113/031015.114809:VERBOSE2:chrome/updater/event_history.cc:266] Emitted a UPDATER_PROCESS START event to the history log
+[73252:1363067:1113/031015.134726:VERBOSE1:chrome/updater/updater.cc:380] Version: 159.0.8140.0, opt, ARM_64, command line: /Users/jonathan/Library/Application Support/Google/GoogleUpdater/159.0.8140.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --crash-handler --database=/Users/jonathan/Library/Application Support/Google/GoogleUpdater/159.0.8140.0/Crashpad --url=https://clients2.google.com/cr/report --annotation=prod=Update4 --annotation=ver=159.0.8140.0 --attachment=/Users/jonathan/Library/Application Support/Google/GoogleUpdater/updater.log --attachment=/Users/jonathan/Library/Application Support/Google/GoogleUpdater/updater_history.jsonl --handshake-fd=6 --enable-logging --vmodule=*/components/update_client/*=2,*/chrome/enterprise_companion/*=2,*/chrome/updater/*=2
+[73252:1363067:1113/031015.136033:VERBOSE1:chrome/updater/updater.cc:383] OS version: 27.2.0, arch: arm64, System uptime (seconds): 88505, parent pid: 1
+[73252:1363067:1113/031015.139002:VERBOSE1:chrome/updater/updater.cc:388] Available disk space in install directory (/Users/jonathan/Library/Application Support/Google/GoogleUpdater): 18237853696B (16.985GiB) / 494384795648B (460.432GiB)
+[73252:1363067:1113/031015.139036:VERBOSE1:chrome/updater/updater.cc:392] Available disk space in temporary directory (/var/folders/l1/smgg255j1w35801xz8dwcbkh0000gn/T/): 18237853696B (16.985GiB) / 494384795648B (460.432GiB)
+[73252:1363067:1113/031015.139120:VERBOSE2:chrome/updater/event_history.cc:266] Emitted a UPDATER_PROCESS START event to the history log
+[73250:1363063:1113/031015.140622:VERBOSE1:chrome/updater/crash_reporter.cc:121] Crash handler launched and ready.
+[73250:1363063:1113/031015.141615:VERBOSE1:chrome/updater/crash_client.cc:109] Found 0 completed crash reports
+[73250:1363063:1113/031015.141708:VERBOSE1:chrome/updater/crash_client.cc:132] Found 0 pending crash reports
+[73250:1363063:1113/031015.141813:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/jonathan/Library/Application Support/Google/RLZ/Crashpad/settings.dat: No such file or directory (2)
+[73250:1363063:1113/031015.141833:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/jonathan/Library/Application Support/Google/consentOptions/Crashpad/settings.dat: No such file or directory (2)
+[73250:1363063:1113/031015.141908:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/jonathan/Library/Application Support/Google/discovery/Crashpad/settings.dat: No such file or directory (2)
+[73250:1363063:1113/031015.141981:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/jonathan/Library/Application Support/Google/AndroidStudio2026.2.2/Crashpad/settings.dat: No such file or directory (2)
+[73250:1363063:1113/031015.142013:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/jonathan/Library/Application Support/Google/Chrome-headless/Crashpad/settings.dat: No such file or directory (2)
+[73250:1363063:1113/031015.142024:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:145] open /Users/jonathan/Library/Application Support/Google/AndroidStudio2025.3.1/Crashpad/settings.dat: No such file or directory (2)
+[73250:1363063:1113/031015.142053:VERBOSE1:chrome/updater/updater.cc:107] Crash reporting initialized.
+[73250:1363063:1113/031015.142284:VERBOSE1:chrome/updater/ipc/update_service_internal_proxy_mojo.cc:61] Run
+[73000:1361660:1113/031025.736345:INFO:chrome/browser/extensions/extension_garbage_collector.cc:212] Garbage collection for extensions on file thread is complete.
+[73000:1361578:1113/031030.805384:INFO:CONSOLE:470] "[vision] pick done #1; bin=1", source: http://localhost:8099/js/vision.js (470)
+[73000:1361578:1113/031030.865441:INFO:CONSOLE:465] "[vision] pick 106.1 -177.7 grip tcp {"x":106.12547738756071,"y":-177.66500311889948,"z":14.000000000000028}", source: http://localhost:8099/js/vision.js (465)
+[73250:1363063:1113/031032.342858:VERBOSE1:chrome/updater/app/app.cc:52] Shutdown: 0
+[73250:1363063:1113/031032.349275:VERBOSE2:chrome/updater/event_history.cc:266] Emitted a UPDATER_PROCESS END event to the history log
+[73250:1363063:1113/031032.349303:VERBOSE1:chrome/updater/updater.cc:425] UpdaterMain (--wake) returned 0.
+[73247:1363057:1113/031032.438576:VERBOSE1:chrome/updater/app/app_wakeall.cc:68] `/Users/jonathan/Library/Application Support/Google/GoogleUpdater/159.0.8140.0/GoogleUpdater.app/Contents/MacOS/GoogleUpdater --wake` exited 0
+[73247:1363045:1113/031032.439115:VERBOSE1:chrome/updater/app/app.cc:52] Shutdown: 0
+[73247:1363045:1113/031032.439609:VERBOSE2:chrome/updater/event_history.cc:266] Emitted a UPDATER_PROCESS END event to the history log
+[73247:1363045:1113/031032.439634:VERBOSE1:chrome/updater/updater.cc:425] UpdaterMain (--wake-all) returned 0.
+[73000:1361578:1113/031041.541383:INFO:CONSOLE:308] "[world] close at tcp 106.2 -177.9 14.2 objs table:191,-107 table:105,-177 bin:-119,209", source: http://localhost:8099/js/world.js (308)
+[73252:1363067:1113/031042.350512:VERBOSE2:chrome/updater/event_history.cc:266] Emitted a UPDATER_PROCESS END event to the history log
+[73252:1363067:1113/031042.350546:VERBOSE1:chrome/updater/updater.cc:425] UpdaterMain (--crash-handler) returned 0.
+[73249:1363049:1113/031042.351720:VERBOSE2:chrome/updater/event_history.cc:266] Emitted a UPDATER_PROCESS END event to the history log
+[73249:1363049:1113/031042.351758:VERBOSE1:chrome/updater/updater.cc:425] UpdaterMain (--crash-handler) returned 0.
+[73000:1361578:1113/031055.067944:INFO:CONSOLE:470] "[vision] pick done #2; bin=2", source: http://localhost:8099/js/vision.js (470)
+[73000:1361578:1113/031057.882724:INFO:CONSOLE:465] "[vision] pick 191.8 -108.2 grip tcp {"x":191.8290700385001,"y":-108.20204722357994,"z":14.000000000000028}", source: http://localhost:8099/js/vision.js (465)
+[73000:1361578:1113/031103.257663:INFO:CONSOLE:308] "[world] close at tcp 192.0 -108.1 13.9 objs table:191,-107 bin:-120,209 bin:-119,209", source: http://localhost:8099/js/world.js (308)
+[73000:1361578:1113/031119.134021:INFO:CONSOLE:470] "[vision] pick done #3; bin=3", source: http://localhost:8099/js/vision.js (470)

@@ -6,7 +6,7 @@ import { World } from './world.js';
 import { fk } from './kinematics.js';
 import {
   solveHomography, applyH, invertH, reprojError, cornerMarkers, layoutArea, boxToWorld, Tracker, planPick,
-  PICK_DEFAULTS, LAYOUT_DEFAULT, CORNERS, rejectReason,
+  PICK_DEFAULTS, LAYOUT_DEFAULT, CORNERS, rejectReason, cameraFromHomography, correctHeight,
 } from './vision-math.js';
 
 const $ = (s) => document.querySelector(s);
@@ -65,6 +65,10 @@ export function initVision(app) {
     }
     return r0 == null ? null : { r0, r1 };
   })();
+  // camera FOV guess — only used when the camera looks (almost) straight down
+  function hfovPrior() {
+    return V.source === 'sim' ? world.settings.cam.hfov : +V.settings.hfov || 70;
+  }
   const canvas = $('#feed');
   const ctx = canvas.getContext('2d');
 
@@ -72,6 +76,7 @@ export function initVision(app) {
   const calKey = () => `cal.${V.source}`;
   function loadCal() {
     V.cal = store.get(calKey(), null);
+    if (V.cal?.H && V.cal.w) V.cal.cam = cameraFromHomography(V.cal.H, V.cal.w, V.cal.h, hfovPrior());
     renderCal();
   }
   function saveCal() {
@@ -85,20 +90,29 @@ export function initVision(app) {
       return false;
     }
     const err = reprojError(H, pairs);
-    V.cal = { pairs, H, Hinv: invertH(H), err, w: V.last?.w, h: V.last?.h, how };
+    const w = V.last?.w, h = V.last?.h;
+    const cam = w ? cameraFromHomography(H, w, h, hfovPrior()) : null;
+    V.cal = { pairs, H, Hinv: invertH(H), err, w, h, how, cam };
     saveCal();
     sendRoi();
     appLog(`Camera calibrated from ${pairs.length} points (${how}), error ${err.toFixed(1)} mm`, err > 5 ? 'warn' : 'info');
+    if (cam) {
+      const [x, y, z] = cam.pos;
+      appLog(`Camera found at X ${x.toFixed(0)} Y ${y.toFixed(0)} mm, ${z.toFixed(0)} mm above the table, tilted ${cam.tilt.toFixed(0)}° (FOV ${cam.hfov.toFixed(0)}°, ${cam.focal}). Measure it — if this is far off, the markers are misplaced.`);
+    }
     V.tracker.clear();
     return true;
   }
   function renderCal() {
     const tag = $('#calState');
     if (V.cal?.H) {
-      tag.textContent = `${V.cal.how} · ${V.cal.err.toFixed(1)} mm`;
+      const c = V.cal.cam;
+      tag.textContent = `${V.cal.how} · ${V.cal.err.toFixed(1)} mm` + (c ? ` · cam ${c.pos[2].toFixed(0)} mm up, ${c.tilt.toFixed(0)}° tilt` : '');
+      world.showCamEstimate(V.source === 'sim' || $('#showGrid').checked ? c?.pos : null);
       tag.className = `tag ${V.cal.err > 5 ? 'warn' : 'ok'}`;
     } else {
       tag.textContent = 'not calibrated';
+      world.showCamEstimate(null);
       tag.className = 'tag warn';
     }
     const pairs = V.touch || [];
@@ -240,7 +254,20 @@ export function initVision(app) {
       } catch {
         return;
       }
+      if (m.t === 'bstatus') {
+        // bridge is up but has no camera yet
+        if (V.source === 'bridge') {
+          $('#feedMsg').hidden = false;
+          $('#feedMsg').textContent = `${m.msg}${m.model ? '' : ` · ${m.modelError}`}`;
+          $('#visStat').textContent = 'PC camera: waiting… (switch the source to "Simulated camera" to work without it)';
+        }
+        return;
+      }
       if (m.t !== 'vision') return;
+      if (m.modelError && !V.modelWarned) {
+        V.modelWarned = true;
+        appLog(`Vision bridge: ${m.modelError} — markers only, no plastic detection`, 'warn');
+      }
       if (m.img) {
         const im = new Image();
         im.onload = () => (V.img = im);
@@ -276,7 +303,11 @@ export function initVision(app) {
       saveCal();
     }
     let objs = [];
-    if (V.cal?.H) objs = m.boxes.map((b) => ({ ...boxToWorld(V.cal.H, b), box: b }));
+    if (V.cal?.H) {
+      // angled-camera correction: slide each detection back along the camera ray to the object's mid-height
+      const camPos = V.settings.heightFix !== false ? V.cal.cam?.pos : null;
+      objs = m.boxes.map((b) => ({ ...correctHeight(boxToWorld(V.cal.H, b), camPos, V.settings.pickZ), box: b }));
+    }
     if (!V.busy) V.tracker.update(objs, now);
     const stable = new Set(V.tracker.stable(now).map((t) => t.id));
     for (const t of V.tracker.tracks) {
@@ -288,7 +319,8 @@ export function initVision(app) {
     world.showTracks(V.busy ? [] : V.tracker.tracks, V.target?.id);
     $('#visStat').textContent =
       `${m.src === 'sim' ? 'SIM' : 'CAM'} ${m.w}×${m.h} · ${V.fps.toFixed(0)} fps · ${m.boxes.length} det · ` +
-      `${m.markers?.length || 0}/4 markers · ${V.tracker.tracks.filter((t) => t.pickable).length} pickable`;
+      `${m.markers?.length || 0}/4 markers · ${V.tracker.tracks.filter((t) => t.pickable).length} pickable` +
+      (m.src !== 'sim' && m.model === false ? ' · NO MODEL' : '');
     autoPick(now);
   }
 
@@ -493,6 +525,10 @@ export function initVision(app) {
       const v = inp.type === 'checkbox' ? inp.checked : inp.value === '' ? null : +inp.value;
       setPath(V.settings, k, v);
       if (k === 'minHits') V.tracker.minHits = Math.max(1, v || 1);
+      if (k === 'hfov' && V.cal?.H && V.cal.w) {
+        V.cal.cam = cameraFromHomography(V.cal.H, V.cal.w, V.cal.h, hfovPrior());
+        saveCal();
+      }
       if (k.startsWith('bin.')) {
         world.applySettings({ bin: { ...V.settings.bin } });
         saveWorld();
