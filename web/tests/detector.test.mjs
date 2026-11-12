@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { decodeYolo, nms, letterbox } from '../js/detector.js';
+import { decodeYolo, nms, letterbox, isEnd2End } from '../js/detector.js';
 
 // build a fake YOLO head output [1, 4+nc, N]
 function head(anchors, nc = 1, N = 50) {
@@ -29,7 +29,7 @@ test('NMS removes overlapping duplicates, keeps separate objects', () => {
 });
 
 test('transposed [1, N, 4+nc] layout and multi-class', () => {
-  const N = 20, C = 6; // real heads always have far more anchors (8400) than channels
+  const N = 2100, C = 6; // real raw heads have thousands of anchors (8400 at 640 px)
   const d = new Float32Array(N * C);
   d.set([50, 50, 10, 10, 0.1, 0.8], 0);
   d.set([200, 50, 10, 10, 0.95, 0.2], C);
@@ -50,4 +50,16 @@ test('letterbox maps crop pixels back exactly', () => {
 test('nms keeps different classes even if they overlap', () => {
   const k = nms([[0, 0, 10, 10, 0.9, 0], [0, 0, 10, 10, 0.8, 1]], 0.45);
   assert.equal(k.length, 2);
+});
+
+test('YOLO26 end-to-end output [1, 300, 6] = x1,y1,x2,y2,score,class', () => {
+  const K = 300;
+  const d = new Float32Array(K * 6);
+  d.set([113.6, 271.79, 200.21, 358.54, 0.9, 0], 0);
+  d.set([10, 10, 50, 40, 0.2, 0], 6);
+  const dims = [1, K, 6];
+  assert.ok(isEnd2End(dims) && !isEnd2End([1, 5, 8400]));
+  const b = decodeYolo(d, dims, { conf: 0.5 });
+  assert.equal(b.length, 1);
+  assert.deepEqual(b[0].map((v) => Math.round(v * 100) / 100), [113.6, 271.79, 200.21, 358.54, 0.9, 0]);
 });

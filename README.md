@@ -191,14 +191,19 @@ node tools/step-to-model.mjs Final_assembly.STEP
 npm run embed
 ```
 
+### Plastic detection in the browser
+The Vision tab's **Webcam (detect in browser)** source does everything in the page: the camera, your YOLO model and the ArUco markers. No Python is needed at run time.
+- **The model:** your model is a **YOLO26n** end-to-end model, converted once with `python export_onnx.py` to `web/models/plastic.onnx`. Its boxes match Ultralytics' Python output to within 0.1 px.
+- **Speed:** it runs on the **GPU via WebGPU** when the browser supports it (Chrome or Edge, Mac and Windows), at about 30 ms per frame on this Mac. Otherwise it falls back to several CPU threads in a background worker, at roughly 150–450 ms per frame.
+- **Checking it:** the status line under the camera view shows which backend is in use and the time per frame.
+- **Camera access:** the browser only allows it on `http://localhost`, so open the app with `npm start` on the PC the camera is plugged into. The page served by the ESP can't use the camera.
+
 ### Running it
 
-**One command for everything:**
+**One command:**
 ```sh
-npm start                     # vision bridge (camera + YOLO + markers) + web app, opens the browser
-npm start -- --camera 1       # other camera; any vision_bridge.py option goes after --
-npm start -- --device 0       # NVIDIA GPU for YOLO
-npm run web                   # web app only (simulator), no Python needed
+npm start                     # web app on http://localhost:8080, opens the browser (detection runs in the page)
+npm run bridge                # optional: the Python vision bridge instead (camera + YOLO in Python)
 ```
 `npm start` finds Python (preferring `Plastic-Segregation-AI/.venv` if it exists) and runs `vision_bridge.py`, which also serves the web app at **http://localhost:8765**. It keeps working when things are missing:
 - **No camera plugged in:** the app still runs and the bridge retries the camera every 5 s.

@@ -255,7 +255,7 @@ export function initVision(app) {
     try {
       V.yolo = await new YoloDetector().load('models/plastic.onnx');
       V.modelError = null;
-      appLog(`YOLO model loaded in the browser (${V.yolo.size}px, ${V.yolo.threads} thread${V.yolo.threads > 1 ? 's' : ''})`);
+      appLog(`Plastic detector running in the browser on ${V.yolo.backend} (${V.yolo.size}px model)`);
     } catch (e) {
       V.modelError = e.message || String(e);
       appLog(`Plastic detector: ${V.modelError}`, 'warn');
@@ -316,13 +316,19 @@ export function initVision(app) {
       const fx = V.frame.getContext('2d', { willReadFrequently: true });
       fx.drawImage(v, 0, 0, w, h);
       const now = performance.now();
-      // markers: often while calibrating, then once a second
-      if (now - markerT > (V.cal?.H ? 1000 : 300)) {
+      // markers: on a <=1280 px copy, twice a second while calibrating, then every 3 s
+      if (now - markerT > (V.cal?.H ? 3000 : 500)) {
         markerT = now;
-        markers = arDetector.detect(fx.getImageData(0, 0, w, h)).map((m) => ({
+        const k = Math.min(1, 1280 / w);
+        const mw = Math.round(w * k), mh = Math.round(h * k);
+        V.mframe ||= document.createElement('canvas');
+        if (V.mframe.width !== mw) Object.assign(V.mframe, { width: mw, height: mh });
+        const mx = V.mframe.getContext('2d', { willReadFrequently: true });
+        mx.drawImage(V.frame, 0, 0, mw, mh);
+        markers = arDetector.detect(mx.getImageData(0, 0, mw, mh)).map((m) => ({
           id: m.id,
-          x: m.corners.reduce((s, c) => s + c.x, 0) / 4,
-          y: m.corners.reduce((s, c) => s + c.y, 0) / 4,
+          x: m.corners.reduce((s, c) => s + c.x, 0) / 4 / k,
+          y: m.corners.reduce((s, c) => s + c.y, 0) / 4 / k,
         }));
       }
       let boxes = [];
@@ -436,7 +442,7 @@ export function initVision(app) {
       `${m.src === 'sim' ? 'SIM' : 'CAM'} ${m.w}×${m.h} · ${V.fps.toFixed(0)} fps · ${m.boxes.length} det · ` +
       `${m.markers?.length || 0}/4 markers · ${V.tracker.tracks.filter((t) => t.pickable).length} pickable` +
       (m.src !== 'sim' && m.model === false ? ' · NO MODEL (markers only)' : '') +
-      (m.ms ? ` · YOLO ${m.ms.toFixed(0)} ms` : '');
+      (m.ms ? ` · YOLO ${m.ms.toFixed(0)} ms on ${V.yolo?.backend || '?'}` : '');
     autoPick(now);
   }
 

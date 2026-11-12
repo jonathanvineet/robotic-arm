@@ -19,11 +19,25 @@ export function nms(boxes, iouThr = 0.45, maxDet = 100) {
   return keep;
 }
 
+/** End-to-end models (YOLO26, YOLOv10): [1, K, 6] = x1, y1, x2, y2, score, class — already NMS-free. */
+export function isEnd2End(dims) {
+  return dims.length === 3 && dims[2] === 6 && dims[1] <= 1000;
+}
+
 /**
- * Decode a YOLOv8/YOLO11 detection head: [1, 4+nc, N] (ultralytics default) or [1, N, 4+nc].
- * Returns boxes in model-input pixels.
+ * Decode a detection output into boxes in model-input pixels.
+ *  - YOLO26 / YOLOv10 end-to-end: [1, K, 6]
+ *  - YOLOv8 / YOLO11 raw head:     [1, 4+nc, N] (ultralytics default) or [1, N, 4+nc]
  */
 export function decodeYolo(data, dims, { conf = 0.5, iou = 0.45, maxDet = 100 } = {}) {
+  if (isEnd2End(dims)) {
+    const out = [];
+    for (let i = 0; i < dims[1]; i++) {
+      const o = i * 6;
+      if (data[o + 4] >= conf) out.push([data[o], data[o + 1], data[o + 2], data[o + 3], data[o + 4], Math.round(data[o + 5])]);
+    }
+    return nms(out, 0.7, maxDet); // the model already removed duplicates; this only catches exact repeats
+  }
   const transposed = dims[2] > dims[1]; // [1, 4+nc, N]
   const C = transposed ? dims[1] : dims[2];
   const N = transposed ? dims[2] : dims[1];
@@ -57,12 +71,41 @@ export class YoloDetector {
   async load(url = 'models/plastic.onnx') {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`model not found at web/${url} — run "python export_onnx.py" in Plastic-Segregation-AI`);
-    const buf = await res.arrayBuffer();
-    const ort = await import('../vendor/ort/ort.wasm.min.mjs');
-    ort.env.wasm.wasmPaths = new URL('../vendor/ort/', import.meta.url).href;
-    ort.env.wasm.numThreads = globalThis.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 2) : 1;
-    this.session = await ort.InferenceSession.create(buf, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
-    this.ort = ort;
+    const buf = new Uint8Array(await res.arrayBuffer());
+    const base = new URL('../vendor/ort/', import.meta.url).href;
+    // 1) GPU (WebGPU) — fastest, Chrome/Edge on Mac & Windows
+    if (navigator.gpu && (await navigator.gpu.requestAdapter().catch(() => null))) {
+      try {
+        const ort = await import('../vendor/ort/ort.webgpu.min.mjs');
+        ort.env.wasm.wasmPaths = base;
+        ort.env.wasm.numThreads = 1;
+        this.session = await ort.InferenceSession.create(buf, { executionProviders: ['webgpu', 'wasm'], graphOptimizationLevel: 'all' });
+        this.ort = ort;
+        this.backend = 'GPU (WebGPU)';
+      } catch (e) {
+        console.warn('WebGPU backend failed, using CPU', e);
+        this.session = null;
+      }
+    }
+    // 2) CPU (WebAssembly): several threads, in a background worker so the page stays smooth
+    if (!this.session) {
+      const ort = await import('../vendor/ort/ort.wasm.min.mjs');
+      ort.env.wasm.wasmPaths = base;
+      ort.env.wasm.numThreads = globalThis.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 2) : 1;
+      for (const proxy of [true, false]) {
+        try {
+          ort.env.wasm.proxy = proxy;
+          this.session = await ort.InferenceSession.create(buf.slice(), { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
+          break;
+        } catch (e) {
+          if (!proxy) throw e;
+          console.warn('worker mode failed, running on the page thread', e);
+        }
+      }
+      this.ort = ort;
+      this.backend = `CPU, ${ort.env.wasm.numThreads} thread${ort.env.wasm.numThreads > 1 ? 's' : ''}${ort.env.wasm.proxy ? ', worker' : ''}`;
+    }
+    this.threads = this.ort.env.wasm.numThreads;
     this.input = this.session.inputNames[0];
     this.output = this.session.outputNames[0];
     this.size = 640;
@@ -75,7 +118,9 @@ export class YoloDetector {
     this.canvas = document.createElement('canvas');
     this.canvas.width = this.canvas.height = this.size;
     this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
-    this.threads = ort.env.wasm.numThreads;
+    // warm-up (WebGPU compiles its shaders on the first run)
+    const S = this.size;
+    await this.session.run({ [this.input]: new this.ort.Tensor('float32', new Float32Array(3 * S * S), [1, 3, S, S]) });
     return this;
   }
 
