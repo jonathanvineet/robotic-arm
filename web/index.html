@@ -97,6 +97,7 @@
   <aside class="col right">
     <section class="card tabs-card">
       <nav class="tabs" id="tabs">
+        <button data-tab="vision">Vision</button>
         <button data-tab="xyz" class="on">XYZ</button>
         <button data-tab="poses">Poses</button>
         <button data-tab="seq">Sequence</button>
@@ -104,6 +105,89 @@
         <button data-tab="test">Test</button>
         <button data-tab="dev">Device</button>
       </nav>
+
+      <!-- Vision: camera -> detections -> pick & place -->
+      <div class="tab" data-tab="vision">
+        <div class="row gap wrap">
+          <select id="visSource" title="Camera source">
+            <option value="sim">Simulated camera</option>
+            <option value="bridge">PC camera (vision bridge)</option>
+          </select>
+          <input id="visUrl" class="grow mono" placeholder="ws://localhost:8765/ws" spellcheck="false">
+          <button class="btn" id="visConnect">Connect</button>
+        </div>
+        <div class="feed" id="feedWrap">
+          <canvas id="feed" width="640" height="480"></canvas>
+          <div class="feed-msg" id="feedMsg">No camera</div>
+        </div>
+        <div class="vstat mono" id="visStat"></div>
+
+        <div class="row gap wrap">
+          <label class="check"><input type="checkbox" id="autoPick"> Auto pick</label>
+          <button class="btn primary" id="pickNow">Pick now</button>
+          <button class="btn" id="pickStop">■ Stop</button>
+          <span class="muted" id="pickStat"></span>
+        </div>
+
+        <details class="sec" open>
+          <summary>Calibration <span id="calState" class="tag">not calibrated</span></summary>
+          <p class="hint">Tape the 4 printed markers (<code>python make_markers.py</code>) at the corners of a square centred on the arm's base. "Front" is the direction the arm points with the base servo at its zero. Then:</p>
+          <div class="row gap wrap">
+            <button class="btn primary" id="calMarkers">Calibrate from mat</button>
+            <label class="check sm"><input type="checkbox" id="calTouch"> Touch-point mode</label>
+            <button class="btn sm" id="calSolve">Solve</button>
+            <button class="btn sm danger" id="calClear">Clear</button>
+          </div>
+          <p class="hint" id="touchHint" hidden>Jog the fingertip down until it touches a spot on the table, then click that spot in the image. Do 4+ spots spread over the work area, then <b>Solve</b>.</p>
+          <ul class="list" id="calPairs"></ul>
+          <label class="check sm"><input type="checkbox" id="showGrid" checked> Show grid, front axis and reach ring</label>
+          <h3>Corner markers <span class="muted" id="layDict"></span></h3>
+          <div class="row gap wrap">
+            <label class="inline">Corner distance B <input type="number" id="layB" step="10"> mm</label>
+            <label class="inline">Marker size <input type="number" id="laySize" step="5"> mm</label>
+            <button class="btn sm" id="layReset">Defaults</button>
+          </div>
+          <p class="hint">Marker centres sit at (±B, ±B) from the base centre. If yours aren't exact, measure each centre and type it below. Pick accuracy is only as good as these numbers.</p>
+          <div class="tablewrap"><table class="cal lay" id="layTable"></table></div>
+        </details>
+
+        <details class="sec">
+          <summary>Pick settings</summary>
+          <div class="xyz">
+            <label>Grip Z<input type="number" data-ps="pickZ" step="1"></label>
+            <label>Hover +Z<input type="number" data-ps="approachZ" step="5"></label>
+            <label>Grip open°<input type="number" data-ps="gripOpen" step="1"></label>
+            <label>Grip close°<input type="number" data-ps="gripClose" step="1"></label>
+            <label>Bin X<input type="number" data-ps="bin.x" step="5"></label>
+            <label>Bin Y<input type="number" data-ps="bin.y" step="5"></label>
+            <label>Drop Z<input type="number" data-ps="bin.z" step="5"></label>
+            <label>Confirm frames<input type="number" data-ps="minHits" step="1" min="1"></label>
+          </div>
+          <label class="check"><input type="checkbox" data-ps="alignRoll"> Turn the wrist to grip long objects across</label>
+        </details>
+
+        <details class="sec">
+          <summary>Simulation world</summary>
+          <div class="row gap wrap">
+            <button class="btn" id="simSpawn">+ Drop 3 plastics</button>
+            <button class="btn" id="simClear">Clear table</button>
+            <span class="muted" id="simScore"></span>
+          </div>
+          <div class="xyz">
+            <label>Cam X<input type="number" data-cam="x" step="10"></label>
+            <label>Cam Y<input type="number" data-cam="y" step="10"></label>
+            <label>Cam height<input type="number" data-cam="z" step="10"></label>
+            <label>H-FOV°<input type="number" data-cam="hfov" step="1"></label>
+            <label>Look X<input type="number" data-cam="lookX" step="10"></label>
+            <label>Look Y<input type="number" data-cam="lookY" step="10"></label>
+            <label>Rotation°<input type="number" data-cam="roll" step="15"></label>
+            <label>Miss rate<input type="number" data-sim="miss" step="0.05" min="0" max="1"></label>
+            <label>Noise px<input type="number" data-sim="noise" step="0.5" min="0"></label>
+          </div>
+          <p class="hint" id="camWarn"></p>
+          <p class="hint">Set these to match your real camera mount to preview what it will see. Any position and rotation works as long as all 4 mat markers are in view. Moving the camera needs a re-calibration (automatic in the simulator, one click in real life).</p>
+        </details>
+      </div>
 
       <!-- XYZ / IK -->
       <div class="tab on" data-tab="xyz">
@@ -176,9 +260,9 @@
           <label class="inline">PCA9685 osc <input type="number" id="calOsc" step="100000" class="w9"> Hz</label>
           <label class="check"><input type="checkbox" id="calBootRelax"> Start limp on power-up</label>
         </div>
-        <h3>Twin geometry (mm)</h3>
-        <div class="xyz five" id="links"></div>
-        <p class="hint">Measure axis-to-axis on your arm. These are only used by the twin and IK, and are stored in this browser.</p>
+        <h3>Arm geometry (mm)</h3>
+        <div class="xyz" id="links"></div>
+        <p class="hint">Measured from <code>Final_assembly.STEP</code>. Used for inverse kinematics and picking. The 3D model itself comes from the STEP file, so only change these if your built arm differs from the CAD.</p>
       </div>
 
       <!-- Test -->

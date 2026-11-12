@@ -1,10 +1,13 @@
 // app.js — RoboArm Studio: controller UI, digital twin, poses, sequences,
 // calibration, tests, keyboard + gamepad input.
 
+// ?debug: timer-driven frames so headless test runs (no rAF) still animate
+if (/[?&]debug\b/.test(location.search)) window.requestAnimationFrame = (f) => setTimeout(() => f(performance.now()), 16);
 import { Twin } from './twin.js';
 import { SimTransport, WsTransport, SerialTransport } from './transport.js';
 import { fk, ik, DEFAULT_LINKS } from './kinematics.js';
 import { defaultConfig } from './sim.js';
+import { initVision } from './vision.js';
 
 // ------------------------------------------------------------------ utils
 const $ = (s, el = document) => el.querySelector(s);
@@ -41,7 +44,7 @@ const S = {
   relaxed: false,
   stateN: 0,
   lastStateAt: 0,
-  links: { ...DEFAULT_LINKS, ...store.get('links', {}) },
+  links: { ...DEFAULT_LINKS, ...store.get('links2', {}) },
   poses: store.get('poses', []),
   seq: store.get('seq', []),
   step: store.get('step', 5),
@@ -72,6 +75,13 @@ const appLog = (text, level = 'info') => log(level, text, 'app');
 const twin = new Twin($('#twin'));
 twin.setLinks(S.links);
 twin.setPose(S.pos, S.cfg.j);
+twin
+  .loadCad('models/arm-model.json')
+  .then((cad) => {
+    appLog(`3D model loaded from ${cad.source} (${cad.parts.length} parts)`);
+    queueRender();
+  })
+  .catch((e) => appLog(`CAD model not loaded (${e.message}) — showing the drawn arm`, 'warn'));
 
 // ------------------------------------------------------------------ connection
 function send(obj) {
@@ -686,11 +696,14 @@ $('#calRevert').onclick = () => {
 $('#calFactory').onclick = () => confirm('Restore factory calibration and speeds on the arm?') && send({ c: 'factory' });
 
 // geometry
-const LINK_LABELS = { base: 'Base', upper: 'Upper arm', fore: 'Forearm', wrist: 'Wrist', tool: 'Gripper' };
+const LINK_LABELS = { base: 'Shoulder height', fwd: 'Shoulder fwd', side: 'Tip side', upper: 'Upper arm', fore: 'Forearm', wrist: 'Wrist', tool: 'Gripper' };
 function applyLinks(L) {
-  for (const k of Object.keys(DEFAULT_LINKS)) L[k] = clamp(+L[k] || DEFAULT_LINKS[k], k === 'base' ? 40 : 10, 1000);
+  for (const k of Object.keys(LINK_LABELS)) {
+    const v = Number.isFinite(+L[k]) ? +L[k] : DEFAULT_LINKS[k];
+    L[k] = k === 'fwd' || k === 'side' ? clamp(v, -200, 200) : clamp(v || DEFAULT_LINKS[k], k === 'base' ? 40 : 10, 1000);
+  }
   S.links = L;
-  store.set('links', L);
+  store.set('links2', L);
   twin.setLinks(L);
   buildLinks();
   queueRender();
@@ -957,3 +970,6 @@ render();
   $('#host').classList.toggle('hidden', $('#mode').value !== 'ws');
   connect();
 }
+
+// ------------------------------------------------------------------ vision (camera pick & place)
+initVision({ S, send, twin, startJob, stopJob, runMoves, appLog });
