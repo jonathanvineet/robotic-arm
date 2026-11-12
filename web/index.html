@@ -132,6 +132,40 @@
         </div>
 
         <details class="sec" open>
+          <summary>Image &amp; small objects</summary>
+          <div class="row gap wrap">
+            <label class="check sm"><input type="checkbox" id="enhAuto"> Auto contrast</label>
+            <label class="check sm"><input type="checkbox" id="enhWb"> White balance</label>
+            <label class="check sm"><input type="checkbox" id="enhPreview"> Show corrected picture</label>
+            <button class="btn sm" id="enhReset">Defaults</button>
+          </div>
+          <label class="field"><span>Brightness <b class="mono" id="enhGammaVal"></b> <span class="muted">(left = auto, right = darker)</span></span>
+            <input type="range" id="enhGamma" min="0.5" max="2" step="0.05"></label>
+          <label class="field"><span>Saturation <b class="mono" id="enhSatVal"></b></span>
+            <input type="range" id="enhSat" min="0.5" max="2" step="0.05"></label>
+          <div class="row gap wrap">
+            <label class="inline">Zoom tiles
+              <select id="tiles">
+                <option value="auto">Auto</option>
+                <option value="1">Off (1)</option>
+                <option value="2">2 × 2</option>
+                <option value="3">3 × 3</option>
+              </select>
+            </label>
+            <span class="muted">Small objects from a high camera: the model looks at overlapping tiles so they appear bigger.</span>
+          </div>
+          <div class="row gap wrap modelrow">
+            <canvas id="modelView" width="128" height="128" title="Exactly what the model sees (last tile, corrected)"></canvas>
+            <div class="grow">
+              <p class="hint">Left: what the model sees. If plastic is still tiny or grey there, lower the camera, use 2×2/3×3 tiles, or collect frames to retrain:</p>
+              <button class="btn sm" id="saveFrame">Save frame for training</button>
+            </div>
+          </div>
+          <h3>Camera controls</h3>
+          <div id="camCtl"><p class="hint">Start the webcam to see what it supports.</p></div>
+        </details>
+
+        <details class="sec" open>
           <summary>Calibration <span id="calState" class="tag">not calibrated</span></summary>
           <p class="hint">Tape the 4 printed markers (<code>python make_markers.py</code>) at the corners of a square centred on the arm's base. "Front" is the direction the arm points with the base servo at its zero. Then:</p>
           <div class="row gap wrap">

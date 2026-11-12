@@ -224,3 +224,5 @@ code { font: 12px var(--mono); background: var(--panel2); padding: 1px 4px; bord
 
 .hint.bad { color: var(--bad); }
 table.lay input[type=number] { width: 72px; }
+#modelView { width: 128px; height: 128px; border: 1px solid var(--line); border-radius: 6px; background: #000; image-rendering: pixelated; }
+.modelrow { align-items: flex-start; margin-top: 8px; }

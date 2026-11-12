@@ -3,7 +3,7 @@
 // (Plastic-Segregation-AI/vision_bridge.py: USB camera + YOLO + ArUco).
 
 import { World } from './world.js';
-import { YoloDetector } from './detector.js';
+import { YoloDetector, computeEnhance, applyEnhance, ENHANCE_DEFAULTS } from './detector.js';
 import { AR } from '../vendor/aruco.mjs';
 import { fk } from './kinematics.js';
 import {
@@ -55,6 +55,9 @@ export function initVision(app) {
     attempts: [], // {x, y, n}: same spot picked again = the last grasp missed
   };
   V.settings.bin = { ...PICK_DEFAULTS.bin, ...(V.settings.bin || {}) };
+  V.settings.enh = { ...ENHANCE_DEFAULTS, ...(V.settings.enh || {}) };
+  V.settings.tiles ??= 'auto';
+  V.settings.preview ??= true;
   V.tracker.minHits = V.settings.minHits;
 
   // reachable ring at grip height (for the overlay)
@@ -297,6 +300,7 @@ export function initVision(app) {
     if (run !== V.camRun) return V.stream.getTracks().forEach((t) => t.stop());
     V.camId = V.stream.getVideoTracks()[0]?.getSettings().deviceId;
     listCameras();
+    buildCamControls();
     V.video ||= Object.assign(document.createElement('video'), { muted: true, playsInline: true });
     V.video.srcObject = V.stream;
     await V.video.play().catch(() => {});
@@ -331,10 +335,33 @@ export function initVision(app) {
           y: m.corners.reduce((s, c) => s + c.y, 0) / 4 / k,
         }));
       }
+      // image correction: measured on a 960 px copy (inside the pick area once calibrated),
+      // applied to the model input and to the preview
+      const k2 = Math.min(1, 960 / w);
+      const vw = Math.round(w * k2), vh = Math.round(h * k2);
+      V.small ||= document.createElement('canvas');
+      if (V.small.width !== vw) Object.assign(V.small, { width: vw, height: vh });
+      const sx = V.small.getContext('2d', { willReadFrequently: true });
+      sx.drawImage(V.frame, 0, 0, vw, vh);
+      const sdata = sx.getImageData(0, 0, vw, vh);
+      const roi = roiPx();
+      V.enh = computeEnhance(sdata.data, vw, vh, roi && roi.map((v) => v * k2), V.settings.enh);
+      if (V.settings.preview && V.enh) {
+        applyEnhance(sdata.data, vw, vh, V.enh);
+        sx.putImageData(sdata, 0, 0);
+        V.view = V.small;
+      } else V.view = null;
       let boxes = [];
       if (V.yolo && !V.busy) {
         try {
-          boxes = await V.yolo.detect(V.frame, w, h, roiPx(), V.settings.conf ?? 0.5);
+          const gpu = /GPU/.test(V.yolo.backend);
+          V.yolo.keepInput = true;
+          // Auto: zoom tiles only inside the calibrated pick area (whole-frame tiling is too slow), GPU only
+          const auto = V.settings.tiles === 'auto';
+          const tiles = auto ? (roi && gpu ? 'auto' : 1) : V.settings.tiles;
+          boxes = await V.yolo.detect(V.frame, w, h, roi, V.settings.conf ?? 0.5, { enhance: V.enh, tiles, maxTiles: auto ? 4 : 9 });
+          const mv = $('#modelView');
+          if (mv && V.yolo.canvas) mv.getContext('2d').drawImage(V.yolo.canvas, 0, 0, mv.width, mv.height);
         } catch (e) {
           V.modelError = `detection failed: ${e.message || e}`;
           V.yolo = null;
@@ -346,6 +373,107 @@ export function initVision(app) {
       await new Promise((r) => setTimeout(r, V.yolo ? 0 : 60));
     }
   }
+  // ---------------- image correction + camera hardware controls
+  function fillImage() {
+    const e = V.settings.enh;
+    $('#enhAuto').checked = !!e.auto;
+    $('#enhWb').checked = !!e.wb;
+    $('#enhGamma').value = e.gamma || 0;
+    $('#enhGammaVal').textContent = e.gamma ? e.gamma.toFixed(2) : 'auto';
+    $('#enhSat').value = e.sat;
+    $('#enhSatVal').textContent = (+e.sat).toFixed(2);
+    $('#enhPreview').checked = !!V.settings.preview;
+    $('#tiles').value = String(V.settings.tiles);
+  }
+  const saveSettings = () => store.set('pick', V.settings);
+  $('#enhAuto').onchange = (e) => ((V.settings.enh.auto = e.target.checked), saveSettings());
+  $('#enhWb').onchange = (e) => ((V.settings.enh.wb = e.target.checked), saveSettings());
+  $('#enhGamma').oninput = (e) => {
+    const v = +e.target.value;
+    V.settings.enh.gamma = v < 0.55 ? 0 : v; // far left = auto
+    $('#enhGammaVal').textContent = V.settings.enh.gamma ? V.settings.enh.gamma.toFixed(2) : 'auto';
+    saveSettings();
+  };
+  $('#enhSat').oninput = (e) => {
+    V.settings.enh.sat = +e.target.value;
+    $('#enhSatVal').textContent = (+e.target.value).toFixed(2);
+    saveSettings();
+  };
+  $('#enhPreview').onchange = (e) => ((V.settings.preview = e.target.checked), saveSettings());
+  $('#tiles').onchange = (e) => ((V.settings.tiles = e.target.value === 'auto' ? 'auto' : +e.target.value), saveSettings());
+  $('#enhReset').onclick = () => {
+    V.settings.enh = { ...ENHANCE_DEFAULTS };
+    V.settings.tiles = 'auto';
+    V.settings.preview = true;
+    saveSettings();
+    fillImage();
+  };
+  fillImage();
+
+  /** Exposure / contrast / white balance on the camera itself (whatever this camera + browser allow). */
+  function buildCamControls() {
+    const box = $('#camCtl');
+    const track = V.stream?.getVideoTracks()[0];
+    const caps = track?.getCapabilities?.() || {};
+    const cur = track?.getSettings?.() || {};
+    const KEYS = ['exposureMode', 'exposureCompensation', 'exposureTime', 'brightness', 'contrast', 'saturation', 'sharpness', 'whiteBalanceMode', 'colorTemperature', 'focusMode', 'focusDistance', 'zoom'];
+    const keys = KEYS.filter((k) => caps[k] != null);
+    if (!keys.length) {
+      box.innerHTML = '<p class="hint">This camera/browser exposes no hardware controls — the software correction above still works. (Windows + Chrome usually exposes more than macOS.)</p>';
+      return;
+    }
+    const saved = store.get(`camctl.${V.camId}`, {});
+    box.innerHTML = keys
+      .map((k) => {
+        const c = caps[k];
+        const label = k.replace(/([A-Z])/g, ' $1').toLowerCase();
+        if (Array.isArray(c))
+          return `<label class="inline">${label} <select data-cc="${k}">${c.map((v) => `<option ${v === cur[k] ? 'selected' : ''}>${v}</option>`).join('')}</select></label>`;
+        return `<label class="field"><span>${label} <b class="mono" data-ccv="${k}">${cur[k] ?? ''}</b></span><input type="range" data-cc="${k}" min="${c.min}" max="${c.max}" step="${c.step || (c.max - c.min) / 100}" value="${cur[k] ?? c.min}"></label>`;
+      })
+      .join('');
+    const apply = async (k, v) => {
+      try {
+        const extra = {};
+        if (k === 'exposureTime' || k === 'exposureCompensation') extra.exposureMode = k === 'exposureTime' ? 'manual' : 'continuous';
+        if (k === 'colorTemperature') extra.whiteBalanceMode = 'manual';
+        if (k === 'focusDistance') extra.focusMode = 'manual';
+        await track.applyConstraints({ advanced: [{ ...extra, [k]: v }] });
+        const all = { ...store.get(`camctl.${V.camId}`, {}), ...extra, [k]: v };
+        store.set(`camctl.${V.camId}`, all);
+      } catch (e) {
+        appLog(`Camera ${k}: ${e.message || e}`, 'warn');
+      }
+    };
+    box.querySelectorAll('[data-cc]').forEach((el) => {
+      el.onchange = el.oninput = () => {
+        const k = el.dataset.cc;
+        const v = el.tagName === 'SELECT' ? el.value : +el.value;
+        const lab = box.querySelector(`[data-ccv="${k}"]`);
+        if (lab) lab.textContent = v;
+        apply(k, v);
+      };
+    });
+    // re-apply what was set last time for this camera
+    if (Object.keys(saved).length) track.applyConstraints({ advanced: [saved] }).catch(() => {});
+  }
+
+  $('#saveFrame').onclick = () => {
+    if (!V.frame?.width) return appLog('No camera frame yet', 'warn');
+    V.frame.toBlob(
+      (b) => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(b);
+        a.download = `plastic_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.jpg`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+        appLog(`Saved ${a.download} (${V.frame.width}×${V.frame.height}) — label these in Roboflow and retrain for your camera height`);
+      },
+      'image/jpeg',
+      0.95,
+    );
+  };
+
   $('#camSelect').onchange = (e) => {
     store.set('camId', e.target.value);
     startWebcam();
@@ -444,6 +572,10 @@ export function initVision(app) {
       (m.src !== 'sim' && m.model === false ? ' · NO MODEL (markers only)' : '') +
       (m.ms ? ` · YOLO ${m.ms.toFixed(0)} ms on ${V.yolo?.backend || '?'}` : '');
     autoPick(now);
+    if (/[?&]debug\b/.test(location.search) && now - (V.dbgT || 0) > 2000) {
+      V.dbgT = now;
+      console.log('[vision]', $('#visStat').textContent, '| tiles', V.yolo?.tiles?.length ?? 0, '| enh', V.enh ? `lo ${V.enh.lo} hi ${V.enh.hi} gamma ${V.enh.gamma.toFixed(2)}` : 'off', '| boxes', JSON.stringify(m.boxes.map((b) => b.slice(0, 4).map(Math.round).concat(+(+b[4]).toFixed(2)))));
+    }
   }
 
   // ------------------------------------------------------------ drawing
@@ -455,7 +587,7 @@ export function initVision(app) {
       canvas.height = m.h;
     }
     if (V.source === 'sim') world.renderTo(ctx);
-    else if (V.source === 'webcam' && V.frame?.width) ctx.drawImage(V.frame, 0, 0, m.w, m.h);
+    else if (V.source === 'webcam' && (V.view || V.frame)?.width) ctx.drawImage(V.view || V.frame, 0, 0, m.w, m.h);
     else if (V.img) ctx.drawImage(V.img, 0, 0, m.w, m.h);
     else {
       ctx.fillStyle = '#000';
@@ -510,6 +642,15 @@ export function initVision(app) {
       );
       ctx.stroke();
       ctx.lineWidth = 2 * s;
+    }
+    // zoom tiles the model looked at (webcam)
+    if (V.source === 'webcam' && V.yolo?.tiles?.length > 1) {
+      ctx.save();
+      ctx.setLineDash([8 * s, 8 * s]);
+      ctx.strokeStyle = 'rgba(255,255,255,.35)';
+      ctx.lineWidth = 1 * s;
+      for (const t of V.yolo.tiles) ctx.strokeRect(t[0], t[1], t[2] - t[0], t[3] - t[1]);
+      ctx.restore();
     }
     for (const mk of m.markers || []) {
       ctx.strokeStyle = '#ffd166';

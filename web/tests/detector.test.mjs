@@ -63,3 +63,56 @@ test('YOLO26 end-to-end output [1, 300, 6] = x1,y1,x2,y2,score,class', () => {
   assert.equal(b.length, 1);
   assert.deepEqual(b[0].map((v) => Math.round(v * 100) / 100), [113.6, 271.79, 200.21, 358.54, 0.9, 0]);
 });
+
+import { computeEnhance, applyEnhance, tileGrid } from '../js/detector.js';
+
+function washedOut(w = 64, h = 48) {
+  // low-contrast, bright image: values squeezed into 150..230 (like the user's whitish webcam)
+  const d = new Uint8ClampedArray(w * h * 4);
+  for (let i = 0; i < w * h; i++) {
+    const v = 150 + ((i * 37) % 81);
+    d.set([v, v - 5, v + 3, 255], i * 4);
+  }
+  return d;
+}
+const lum = (d) => {
+  let lo = 255, hi = 0, s = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const l = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    lo = Math.min(lo, l); hi = Math.max(hi, l); s += l;
+  }
+  return { lo, hi, mean: s / (d.length / 4) };
+};
+
+test('washed-out frame: auto contrast + brightness restore a full range and mid-grey average', () => {
+  const d = washedOut();
+  const before = lum(d);
+  const P = computeEnhance(d, 64, 48);
+  applyEnhance(d, 64, 48, P);
+  const after = lum(d);
+  assert.ok(before.hi - before.lo < 90 && after.hi - after.lo > 200, `range ${before.hi - before.lo} -> ${after.hi - after.lo}`);
+  assert.ok(Math.abs(after.mean - 117) < 30, `mean ${after.mean}`);
+});
+
+test('enhancement only touches the given rectangle (letterbox padding stays 114)', () => {
+  const d = washedOut(10, 10);
+  for (let i = 0; i < 10; i++) d.set([114, 114, 114, 255], i * 4); // first row = padding
+  applyEnhance(d, 10, 10, computeEnhance(d, 10, 10, [0, 1, 10, 10]), [0, 1, 10, 10]);
+  for (let i = 0; i < 10; i++) assert.deepEqual([...d.slice(i * 4, i * 4 + 3)], [114, 114, 114]);
+});
+
+test('all corrections off = no change', () => {
+  assert.equal(computeEnhance(washedOut(), 64, 48, null, { auto: false, gamma: 0 && 1, sat: 1, wb: false }), null);
+});
+
+test('zoom tiles cover the region with overlap; auto picks more tiles for bigger regions', () => {
+  const t = tileGrid([0, 0, 1000, 800], 2);
+  assert.equal(t.length, 4);
+  assert.deepEqual(t[0].slice(0, 2), [0, 0]);
+  assert.deepEqual(t[3].slice(2), [1000, 800]);
+  assert.ok(t[0][2] > t[1][0], 'neighbouring tiles overlap');
+  assert.equal(tileGrid([0, 0, 500, 400], 'auto').length, 1);
+  assert.equal(tileGrid([0, 0, 900, 900], 'auto').length, 4);
+  assert.ok(tileGrid([0, 0, 1920, 1080], 'auto').length <= 6);
+  assert.equal(tileGrid([0, 0, 1920, 1080], 1).length, 1);
+});

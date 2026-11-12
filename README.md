@@ -197,6 +197,9 @@ The Vision tab's **Webcam (detect in browser)** source does everything in the pa
 - **Speed:** it runs on the **GPU via WebGPU** when the browser supports it (Chrome or Edge, Mac and Windows), at about 30 ms per frame on this Mac. Otherwise it falls back to several CPU threads in a background worker, at roughly 150–450 ms per frame.
 - **Checking it:** the status line under the camera view shows which backend is in use and the time per frame.
 - **Camera access:** the browser only allows it on `http://localhost`, so open the app with `npm start` on the PC the camera is plugged into. The page served by the ESP can't use the camera.
+- **Image correction** (Vision → Image & small objects): auto contrast, automatic or manual brightness, saturation, and optional white balance. These are applied to the model's input and, if ticked, to the preview. They fix a washed-out or whitish webcam. Under *Camera controls* you'll find any hardware settings the camera exposes (exposure, contrast, white balance, focus). Windows usually exposes more than macOS.
+- **Small objects from a high camera:** the **Zoom tiles** setting runs the model on overlapping tiles, so small items appear 2–3× bigger to it. *Auto* uses 2×2 tiles inside the calibrated pick area, on the GPU only. Each tile costs one extra model run. The small *model view* square shows exactly what the model sees.
+- **The real fix for small objects is training data from your actual setup.** Use **Save frame for training** to collect frames from the mounted camera, label them in Roboflow, retrain, then run `python export_onnx.py` again.
 
 ### Running it
 
