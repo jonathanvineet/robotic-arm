@@ -31,7 +31,7 @@ const store = {
 export function initVision(app) {
   const { S, send, twin, startJob, stopJob, runMoves, appLog } = app;
   const world = new World(twin);
-  const savedSim = store.get('sim4', null);
+  const savedSim = store.get('sim5', null);
   if (savedSim) world.applySettings(savedSim);
   world.spawn(3);
 
@@ -114,7 +114,7 @@ export function initVision(app) {
   };
 
   // ---------------- workspace markers (4 corners around the robot)
-  const saveWorld = () => store.set('sim4', world.settings);
+  const saveWorld = () => store.set('sim5', world.settings);
   const layout = () => ({ ...LAYOUT_DEFAULT, ...world.settings.layout });
   V.settings.area = layoutArea(layout());
   function renderLayout() {

@@ -12,7 +12,7 @@ import { ik, fk, toJoint, toServo } from './kinematics.js';
 // Keep in sync with Plastic-Segregation-AI/make_markers.py
 export const LAYOUT_DEFAULT = {
   B: 360, // marker centres at (±B, ±B) mm from the base centre
-  size: 60, // printed marker side, mm (black square)
+  size: 100, // printed marker side, mm (black square)
   ids: [0, 1, 2, 3], // front-left, front-right, back-right, back-left
   dict: 'DICT_4X4_50',
   points: null, // optional measured centres [{id, x, y}] — overrides B
@@ -28,12 +28,12 @@ export function cornerMarkers(lay = LAYOUT_DEFAULT) {
   return xy.map(([x, y], i) => ({ id: L.ids[i], x, y, corner: CORNERS[i] }));
 }
 
-/** Pick area = inside the marker square (minus the markers themselves). */
+/** Pick area = the square between the marker centres (the markers sit in the corners, out of reach). */
 export function layoutArea(lay = LAYOUT_DEFAULT) {
   const L = { ...LAYOUT_DEFAULT, ...lay };
   const m = cornerMarkers(L);
   const xs = m.map((p) => p.x), ys = m.map((p) => p.y);
-  const inset = L.size * 0.75;
+  const inset = 0;
   return { x0: Math.min(...xs) + inset, x1: Math.max(...xs) - inset, y0: Math.min(...ys) + inset, y1: Math.max(...ys) - inset };
 }
 
@@ -52,7 +52,7 @@ const norm = (a) => {
  * image "up" pointing as close as possible to +x (away from the arm).
  * hfov = horizontal field of view in degrees. w,h = image size in px.
  */
-export function makeCamera({ x = 0, y = 0, z = 1050, lookX = 0, lookY = 0, hfov = 70, w = 1920, h = 1080, roll = 0 } = {}) {
+export function makeCamera({ x = 0, y = 0, z = 1150, lookX = 0, lookY = 0, hfov = 70, w = 1920, h = 1080, roll = 0 } = {}) {
   const pos = [x, y, z];
   const f = norm(sub([lookX, lookY, 0], pos));
   let up0 = [1, 0, 0];

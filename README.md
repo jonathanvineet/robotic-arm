@@ -145,7 +145,7 @@ Top view. The robot frame has its origin at the centre of the arm's base, with *
                  │     ·    180–300 mm all round   ·  │
                  │   ·                               ·│
    ┌─────┐       │   ·            ( ◎ )              ·│   ◎ arm base = origin
-   │ BIN │       │   ·     camera 1050 mm straight  · │   camera on the base axis,
+   │ BIN │       │   ·     camera 1150 mm straight  · │   camera on the base axis,
    └─────┘       │     ·   above the base, looking  · │   looking straight down
   (-120,210)     │        · ·  down at everything  ·  │
    ID2 back-right└────────────────────────────────────┘ ID1 front-right
@@ -156,18 +156,18 @@ Top view. The robot frame has its origin at the centre of the arm's base, with *
 | Item | Where / how |
 |---|---|
 | **Arm** | In the middle of the table. Clamp or bolt the base so it can never shift. |
-| **Corner markers** | Run `python make_markers.py` and print the PDF at 100% (one 60 mm marker per page; check the 50 mm scale bar). Tape the markers flat with their **centres at (±360, ±360) mm** from the base centre: ID0 front-left, ID1 front-right, ID2 back-right, ID3 back-left. Each page's arrow points to the front. Easiest method: draw a cross through the base centre (one line along the arm's front direction, one across), then measure 360 mm along each line and 360 mm across. If your markers end up somewhere else, measure their centres and type them into Vision → Calibration → Corner markers. Picks are only as accurate as these numbers. |
+| **Corner markers** | Run `python make_markers.py` and print the PDF at 100% (one 100 mm marker per page; check the 50 mm scale bar). Tape the markers flat with their **centres at (±360, ±360) mm** from the base centre: ID0 front-left, ID1 front-right, ID2 back-right, ID3 back-left. Each page's arrow points to the front. Easiest method: draw a cross through the base centre (one line along the arm's front direction, one across), then measure 360 mm along each line and 360 mm across. If your markers end up somewhere else, measure their centres and type them into Vision → Calibration → Corner markers. Picks are only as accurate as these numbers. |
 | **Pick area** | Everything inside the square. The arm (as built in the CAD) reaches the table in a **ring 180–300 mm from the base, all the way round**: it leans back over itself for targets behind. Two places are out of reach: the area right next to the base, and a thin wedge exactly on the arm's left, which would need a little more than the base servo's 180°. Objects there are boxed in orange as *out of reach*. |
-| **Camera** | **1050 mm straight above the centre of the base, looking straight down** (anywhere from 1000 to 1200 mm works), at **1920×1080**. It can be rotated any way, but all 4 markers must be fully in the picture. Mount it on a gallows stand: a pole behind the robot, outside its reach, with a boom over the top. It must never move after calibration. |
+| **Camera** | **1150 mm straight above the centre of the base, looking straight down** (anywhere from 1120 to 1300 mm works), at **1920×1080**. It can be rotated any way, but all 4 markers must be fully in the picture. Mount it on a gallows stand: a pole behind the robot, outside its reach, with a boom over the top. It must never move after calibration. |
 | **Bin** | Back-left at X −120, Y 210 mm (changeable in Pick settings), under 120 mm tall. The bin's footprint is ignored for detections. |
 | **Light** | Even, diffuse light from above or the sides. Avoid glare spots and hard shadows. |
 | **Background** | A plain matte surface that contrasts with plastic. |
 
 ### Camera height
 - **Too low:** the arm stretched straight up is about 460 mm tall. Keep at least 150 mm above that, so 610 mm or more.
-- **Wide enough:** to see all 4 corners (±360 mm plus the markers) on the short side of a 16:9, 70° webcam, the camera must be at least about 1000 mm high. With a 4:3 camera or a wider lens you can go lower.
-- **Detail:** at 1050 mm and 1920×1080 you get about 1.3 px/mm, so a 30 mm bottle cap is about 39 px. The bridge runs YOLO only on the marker square, which keeps objects large for the model and stops the arm itself being detected.
-- **Accuracy:** higher means less error from tall objects leaning in the view (about 4 mm at the edge of the square from 1050 mm).
+- **Wide enough:** to see all 4 corners (±360 mm plus the 100 mm markers and their white borders) on the short side of a 16:9, 70° webcam, the camera must be at least about 1110 mm high. With a 4:3 camera or a wider lens you can go lower.
+- **Detail:** at 1150 mm and 1920×1080 you get about 1.2 px/mm, so a 30 mm bottle cap is about 36 px. The bridge runs YOLO only on the marker square, which keeps objects large for the model and stops the arm itself being detected.
+- **Accuracy:** higher means less error from tall objects leaning in the view (about 4 mm at the edge of the square from 1150 mm).
 - **Test your model at this height.** If it misses small objects, try `--imgsz 960`.
 
 ### Calibrating (once per camera position)

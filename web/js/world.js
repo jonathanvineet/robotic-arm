@@ -86,7 +86,7 @@ export class World {
       bin: { x: -120, y: 210, z: 150 },
       binSize: 120,
       // straight above the base axis, looking straight down over the whole marker square (README §7)
-      cam: { x: 0, y: 0, z: 1050, lookX: 0, lookY: 0, hfov: 70, w: 1920, h: 1080, roll: 0 },
+      cam: { x: 0, y: 0, z: 1150, lookX: 0, lookY: 0, hfov: 70, w: 1920, h: 1080, roll: 0 },
       miss: 0.08,
       noise: 1.5,
     };
